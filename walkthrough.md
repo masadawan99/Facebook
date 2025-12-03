@@ -9,20 +9,20 @@ I have successfully converted your CLI application to a JavaFX GUI application w
     *   Source code in `src/main/java/com/facebook`.
     *   Resources in `src/main/resources/com/facebook`.
 
-2.  **JavaFX Views**:
-    *   **Login**: `login-view.fxml` with manual login bypass (User: `admin`, Pass: `admin`).
-    *   **Signup**: `signup-view.fxml` with validation.
-    *   **Home**: `home-view.fxml` with a 3-column layout (Sidebar, Feed, Contacts) matching Facebook's design.
+2.  **Database Configuration**:
+    *   **Path**: Configured to use the shared drive path: `G:\Shared drives\Facebook\Database`.
+    *   **Dynamic Loading**: The application now dynamically loads Feed posts and Contacts directly from this database path.
 
-3.  **Styling**:
-    *   `styles.css` with Facebook brand colors, hover effects, transitions, and "toast" error messages.
-    *   **Refinements**: Dark text for better readability, sidebar wrappers with padding, and hover animations for interactive elements.
+3.  **Styling Enhancements**:
+    *   **Sidebar**: Wrapped in a shadowed, bordered container with rounded corners.
+    *   **Typography**: Applied 'Segoe UI' font for a clean, modern look.
+    *   **Icons**: Integrated text-based icons for navigation items.
 
 4.  **Features**:
     *   **Authentication**: Real integration with `Database` class + Manual Fallback.
-    *   **Feed**: Dynamic post creation in `HomeController`.
-    *   **Navigation**: Top bar and Sidebar structure ready for expansion.
-    *   **Interactivity**: "Friends" sidebar item now opens a Friends List view. "Contacts" list populates dynamically (or with placeholders).
+    *   **Feed**: Dynamic post loading from the shared database.
+    *   **Interactivity**: "Friends" sidebar item now opens a Friends List view.
+    *   **Logout**: Added a logout button (door icon) in the top navigation bar to return to the login screen.
 
 ## How to Run
 
@@ -36,5 +36,5 @@ If you cannot connect to the database or want to test quickly:
 *   **Password**: `admin`
 
 ## Next Steps
-*   Connect `Database.Load_Feed()` in `HomeController.java` to show real posts.
-*   Implement the specific views for "Marketplace", "Groups", etc., by swapping the center content of the `BorderPane`.
+*   Ensure your `G:` drive is mounted and accessible.
+*   Run the application to see your real data synced from the shared drive.

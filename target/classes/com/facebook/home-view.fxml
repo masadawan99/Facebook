@@ -43,6 +43,7 @@
                   <Button styleClass="round-button" text="💬" />
                   <Button styleClass="round-button" text="🔔" />
                   <Button fx:id="profileButton" styleClass="round-button" text="👤" />
+                  <Button fx:id="logoutButton" styleClass="round-button" text="🚪" />
                </children>
             </HBox>
          </children>

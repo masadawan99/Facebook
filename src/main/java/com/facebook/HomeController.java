@@ -11,7 +11,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
@@ -28,6 +33,9 @@ public class HomeController implements Initializable {
     private Button friendsButton;
 
     @FXML
+    private Button logoutButton;
+
+    @FXML
     private VBox feedContainer;
 
     @FXML
@@ -42,7 +50,6 @@ public class HomeController implements Initializable {
         if (Main.current != null) {
             String fullName = Main.current.getFirstname() + " " + Main.current.getLastname();
             sidebarProfile.setText(fullName);
-            // profileButton.setText(fullName.substring(0, 1)); // Initial
         } else {
             sidebarProfile.setText("Guest User");
         }
@@ -58,26 +65,48 @@ public class HomeController implements Initializable {
 
         // Setup Sidebar Actions
         friendsButton.setOnAction(e -> showFriendsView());
+
+        // Setup Logout
+        if (logoutButton != null) {
+            logoutButton.setOnAction(this::logout);
+        }
+    }
+
+    private void logout(ActionEvent event) {
+        try {
+            Main.current = null; // Clear current user
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml"));
+            Scene scene = new Scene(fxmlLoader.load(), 600, 400);
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setTitle("Facebook - Login");
+            stage.setScene(scene);
+            stage.centerOnScreen();
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void loadFeed() {
         feedContainer.getChildren().clear();
 
-        // In a real scenario, we would fetch posts from Database.Load_Feed()
-        // For now, we will create some dummy posts if the DB is empty or just to show
-        // UI
-
         boolean loadedFromDB = false;
-        // Try to load real posts if available (logic from Main.java adapted)
-        // ArrayList<Post> posts = Database.Load_Feed();
-        // if (posts != null && !posts.isEmpty()) {
-        // for (Post p : posts) { ... loadedFromDB = true; }
-        // }
+        try {
+            ArrayList<Post> posts = Database.Load_Feed();
+            if (posts != null && !posts.isEmpty()) {
+                for (Post p : posts) {
+                    // Calculate time difference for display (simplified)
+                    String timeDisplay = p.getTime().toString();
+                    addPostToFeed(p.getSender(), timeDisplay, p.getText());
+                }
+                loadedFromDB = true;
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading feed: " + e.getMessage());
+        }
 
         if (!loadedFromDB) {
-            addPostToFeed("Yasmin Shaukat", "10 mins ago",
-                    "This is a sample post content mimicking the screenshot. It has text and could have images.");
-            addPostToFeed("Abdullah Hassan", "1 hour ago", "Just setting up my new Facebook clone! 🚀");
+            addPostToFeed("System", "Now", "No posts found in database or database not connected.");
         }
     }
 
@@ -85,21 +114,18 @@ public class HomeController implements Initializable {
         contactsList.getChildren().clear();
 
         if (Main.current != null) {
-            // Try to load friends from DB
-            // ArrayList<User> friends =
-            // Database.Load_Friends(Main.current.getCredentials().getUsername());
-            // if (friends != null) {
-            // for (User friend : friends) {
-            // addContactItem(friend.getFirstname() + " " + friend.getLastname());
-            // }
-            // }
-        }
-
-        // Fallback / Placeholder contacts if list is empty
-        if (contactsList.getChildren().isEmpty()) {
-            addContactItem("Friend 1");
-            addContactItem("Friend 2");
-            addContactItem("Friend 3");
+            try {
+                ArrayList<String> friends = Database.Load_Friends(Main.current.getCredentials().getUsername());
+                if (friends != null && !friends.isEmpty()) {
+                    for (String friend : friends) {
+                        addContactItem(friend);
+                    }
+                } else {
+                    addContactItem("No friends yet");
+                }
+            } catch (Exception e) {
+                System.out.println("Error loading contacts: " + e.getMessage());
+            }
         }
     }
 
@@ -118,32 +144,37 @@ public class HomeController implements Initializable {
         title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #050505;");
         feedContainer.getChildren().add(title);
 
-        // Load friends dynamically or placeholders
-        // ArrayList<User> friends = Database.Load_Friends(...);
+        if (Main.current != null) {
+            try {
+                ArrayList<String> friends = Database.Load_Friends(Main.current.getCredentials().getUsername());
+                if (friends != null) {
+                    for (String friendName : friends) {
+                        HBox friendRow = new HBox(10);
+                        friendRow.setAlignment(Pos.CENTER_LEFT);
+                        friendRow.setStyle(
+                                "-fx-background-color: white; -fx-padding: 10px; -fx-background-radius: 8px; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1);");
 
-        // Placeholder loop
-        for (int i = 1; i <= 5; i++) {
-            HBox friendRow = new HBox(10);
-            friendRow.setAlignment(Pos.CENTER_LEFT);
-            friendRow.setStyle(
-                    "-fx-background-color: white; -fx-padding: 10px; -fx-background-radius: 8px; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 2, 0, 0, 1);");
+                        Label avatar = new Label("👤");
+                        avatar.setStyle(
+                                "-fx-font-size: 24px; -fx-background-color: #e4e6eb; -fx-background-radius: 50%; -fx-min-width: 50px; -fx-min-height: 50px; -fx-alignment: center;");
 
-            Label avatar = new Label("👤");
-            avatar.setStyle(
-                    "-fx-font-size: 24px; -fx-background-color: #e4e6eb; -fx-background-radius: 50%; -fx-min-width: 50px; -fx-min-height: 50px; -fx-alignment: center;");
+                        Label name = new Label(friendName);
+                        name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #050505;");
 
-            Label name = new Label("Friend " + i);
-            name.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #050505;");
+                        Region spacer = new Region();
+                        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
+                        Button messageBtn = new Button("Message");
+                        messageBtn.getStyleClass().add("button");
+                        messageBtn.getStyleClass().add("secondary");
 
-            Button messageBtn = new Button("Message");
-            messageBtn.getStyleClass().add("button");
-            messageBtn.getStyleClass().add("secondary"); // Blue/Green style
-
-            friendRow.getChildren().addAll(avatar, name, spacer, messageBtn);
-            feedContainer.getChildren().add(friendRow);
+                        friendRow.getChildren().addAll(avatar, name, spacer, messageBtn);
+                        feedContainer.getChildren().add(friendRow);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error loading friends view: " + e.getMessage());
+            }
         }
     }
 
@@ -220,5 +251,6 @@ public class HomeController implements Initializable {
         postInput.clear();
 
         // In real app, save to Database
+        // Database.Write_Post(new Post(content, ...));
     }
 }
