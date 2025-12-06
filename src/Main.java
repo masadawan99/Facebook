@@ -505,6 +505,7 @@ public class Main {
     public static void Add_in_Feed(List<String> friends, String path,Post post){
         for(String f: friends){
             Database.WriteFeed(path,f,post);
+
             Database.Write_Notification(f,Input_NotificationT());
         }
     }
@@ -529,6 +530,7 @@ public class Main {
         ArrayList<Game> games = new ArrayList<>();
         games.add(new TicTacToe());
         games.add(new Hangman());
+        games.add(new SnakeGame());
         return games;
     }
 

@@ -17,6 +17,7 @@ public class Database {
     private static final File GameseInvitesfldr = new File(Gamesefldr, "GamesInvites");
     public static final File TicTacToefldr = new File(Gamesefldr, "TicTacToe");
     public static final File HangManfldr = new File(Gamesefldr, "HangMan");
+    public static final File Snakegamefldr = new File(Gamesefldr, "SnakeGame");
     private static final File FriendRequestsSentfolder = new File(Friendsfolder,"FriendRequestsSent");
     private static final File FriendRequestsRecievedfolder = new File(Friendsfolder,"FriendRequestsRecieved");
     private static ArrayList<Notification> read;
@@ -64,6 +65,33 @@ public class Database {
             System.out.println("error");
         }
     }
+
+    public static int Load_HighScore(){
+       String curr = Main.current.getCredentials().getUsername();
+        File fldr = new File(Snakegamefldr,curr);
+        File file = new File(fldr,"HighScore");
+        try(ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))){
+            return (int) in.readObject();
+        }catch (Exception s){
+            return 0;
+        }
+    }
+
+    public static void Write_HighsSore(int score){
+        String curr = Main.current.getCredentials().getUsername();
+        File fldr = new File(Snakegamefldr,curr);
+        if (!fldr.exists()) {
+            fldr.mkdirs();
+        }
+        File file = new File(fldr,"HighScore");
+        try(ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))){
+            out.writeObject(score);
+        }catch (Exception e){
+            System.out.println("error");
+        }
+    }
+
+
 
     public static boolean[] Load_found_arr(String filename){
         File fldr = new File(HangManfldr,filename);
