@@ -50,7 +50,7 @@ public class Page {
                 }case 3->{
                     Main.Load_Sent_Friend_Requestlist();
                 }case 4->{
-                    View_My_Posts();//working on
+                    View_My_Posts();
                 }case 0->{
                     return;
                 }
@@ -89,12 +89,13 @@ public class Page {
                         User friend = Database.LoadUser(friendUsername);
                         friend.Print_profile();
                         if(Main.Yes_or_No("remove friend?")){
+                            Database.Delete_Friend_Chat(friendUsername);
                             Database.Delete_Friend(friendUsername);
                             System.out.println("Friend removed successfully!");
                         }
                     }
                 }case 3->{
-                    //working....
+                    //creamy deal with ts
                 }case 0->{
                     return;
                 }
@@ -141,102 +142,158 @@ public class Page {
         }
     }
 
-    public static void People_you_may_know(){
-        List<String> friend_of_friend = Database.Load_Friend_of_Friends();
-        HashMap<String,List<String>> mutual_frndz = Database.mutual_frndz(friend_of_friend);
-        friend_of_friend = Database.Sort_by_mutual_count(friend_of_friend,mutual_frndz);
-        int pageSize = 20;
-        int totalPages = (int) Math.ceil((double) friend_of_friend.size() / pageSize);
-        int currentPage = 1;
+    public static void People_you_may_know() {
+        boolean discover = false;
 
-        while(true){
-            int startIndex = (currentPage - 1) * pageSize;
-            int endIndex = Math.min(startIndex + pageSize, friend_of_friend.size());
+        while (true) {
+            List<String> friend_of_friend;
+            HashMap<String, List<String>> mutual_frndz = new HashMap<>();
 
-            System.out.println("=========================================");
-            System.out.println("          ALL USERS");
-            System.out.println("     Page " + currentPage + " of " + totalPages);
-            System.out.println("=========================================");
-            for (; startIndex < endIndex; startIndex++) {
-                User temp = Database.LoadUser(friend_of_friend.get(startIndex));
-                System.out.print((startIndex+1)+" ");
-                temp.Print_profile();
-                System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
-                System.out.println("Mutual Friends: "+mutual_frndz.get(friend_of_friend.get(startIndex)).size());
-                System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
-            }
-            System.out.println("=========================================");
-            System.out.println("            1- Next Page");
-            System.out.println("            2- Previous Page");
-            System.out.println("            3- Go to Page");
-            System.out.println("            4- Chose person");
-            System.out.println("            0- Back");
-            System.out.println("=========================================");
-            switch(Main.Input_Int("Choice")){
-                case 1->{
-                    if(currentPage < totalPages){
-                        currentPage++;
-                    }else{
-                        System.out.println("Already on last page!");
+            code: {
+                if (!discover) {
+                    friend_of_friend = Database.Load_Friend_of_Friends();
+                    mutual_frndz = Database.mutual_frndz(friend_of_friend);
+                    friend_of_friend = Database.Sort_by_mutual_count(friend_of_friend, mutual_frndz);
+                } else {
+                    friend_of_friend = Database.Load_Everyone3_6();
+                }
+
+                int pageSize = 20;
+                int totalPages = (int) Math.ceil((double) friend_of_friend.size() / pageSize);
+                int currentPage = 1;
+
+                while (true) {
+                    int startIndex = (currentPage - 1) * pageSize;
+                    int endIndex = Math.min(startIndex + pageSize, friend_of_friend.size());
+
+                    System.out.println("=========================================");
+                    System.out.println("          ALL USERS");
+                    System.out.println("     Page " + currentPage + " of " + totalPages);
+                    System.out.println("=========================================");
+
+                    for (int i = startIndex; i < endIndex; i++) {
+                        User temp = Database.LoadUser(friend_of_friend.get(i));
+                        System.out.print((i - startIndex + 1) + " ");
+                        temp.Print_profile();
+                        System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
+
+                        if (!discover) {
+                            List<String> mutuals = mutual_frndz.get(friend_of_friend.get(i));
+                            System.out.println("Mutual Friends: " + (mutuals != null ? mutuals.size() : 0));
+                            System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
+                        }
                     }
-                }case 2->{
-                    if(currentPage > 1){
-                        currentPage--;
-                    }else{
-                        System.out.println("Already on first page!");
+
+                    System.out.println("=========================================");
+                    System.out.println("            1- Next Page");
+                    System.out.println("            2- Previous Page");
+                    System.out.println("            3- Go to Page");
+                    System.out.println("            4- Discover more people");
+                    System.out.println("            5- Back to People u may know");
+                    System.out.println("            6- Choose person");
+                    System.out.println("            0- Return");
+                    System.out.println("=========================================");
+
+                    int choice = Main.Input_Int("Choice");
+
+                    switch (choice) {
+                        case 1 -> {
+                            if (currentPage < totalPages) currentPage++;
+                            else System.out.println("Already on last page!");
+                        }
+                        case 2 -> {
+                            if (currentPage > 1) currentPage--;
+                            else System.out.println("Already on first page!");
+                        }
+                        case 3 -> {
+                            int pageNum = Main.Input_Int("Page Number");
+                            if (pageNum >= 1 && pageNum <= totalPages) currentPage = pageNum;
+                            else System.out.println("Invalid page number!");
+                        }
+                        case 4 -> {
+                            if (!discover) {
+                                discover = true;
+                                break code;
+                            } else {
+                                System.out.println("Already in Discover mode!");
+                            }
+                        }
+                        case 5 -> {
+                            if (discover) {
+                                discover = false;
+                                break code;
+                            } else {
+                                System.out.println("Already in People u may know");
+                            }
+                        }
+                        case 6 -> {
+                            int dex = Main.Input_Int("User Index (from current page)");
+                            if (dex >= 1 && dex <= (endIndex - startIndex)) {
+                                int globalIndex = startIndex + (dex - 1);
+                                User chosen = Database.LoadUser(friend_of_friend.get(globalIndex));
+                                if (!discover) {
+                                    person_chosen(chosen, mutual_frndz);
+                                } else {
+                                    person_chosen(chosen, null);
+                                }
+                            } else {
+                                System.out.println("Invalid Index");
+                            }
+                        }
+                        case 0 -> {
+                            return;
+                        }
+                        default -> System.out.println("Invalid Choice!");
                     }
-                }case 3->{
-                    int pageNum = Main.Input_Int("Page Number");
-                    if(pageNum >= 1 && pageNum <= totalPages){
-                        currentPage = pageNum;
-                    }else{
-                        System.out.println("Invalid page number!");
-                    }
-                }case 4->{
-                    int dex = Main.Input_Int("User Index (from current page)");
-                    if(dex >= 1 &&dex <= endIndex){
-                        person_chosen(Database.LoadUser(friend_of_friend.get(--dex)),mutual_frndz);
-                    }else{
-                        System.out.println("Invalid Index");
-                    }
-                }case 0->{
-                    return;
                 }
             }
         }
     }
 
-    public static void person_chosen(User user,HashMap<String,List<String>> map){
-        while (true){
+    public static void person_chosen(User user, HashMap<String, List<String>> map) {
+        boolean discovery = map == null;
+
+        while (true) {
             System.out.println("=============================================");
             System.out.println("              Chosen person");
             System.out.println("=============================================");
             user.Print_profile();
             System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
-            System.out.println("Mutual Friends: "+map.get(user.getCredentials().getUsername()).size());
-            System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
+            if (!discovery) {
+                List<String> mutuals = map.get(user.getCredentials().getUsername());
+                System.out.println("Mutual Friends: " + (mutuals != null ? mutuals.size() : 0));
+                System.out.println("- - - - - - - - - - - - - - - - - - - - - -");
+            }
             System.out.println("=============================================");
-            System.out.println("1- View Mutual Friends");
+            if (!discovery) System.out.println("1- View Mutual Friends");
             System.out.println("2- Send Friend Request");
             System.out.println("3- Visit their profile");
             System.out.println("0- Return");
-            switch (Main.Input_Int("Choice")){
-                case 1->{
-                    System.out.println("=============================================");
-                    System.out.println("Mutual Friends:");
-                    Main.Print_Friends_List(map.get(user.getCredentials().getUsername()));
-                    System.out.println("=============================================");
-                }case 2->{
+
+            int choice = Main.Input_Int("Choice");
+
+            switch (choice) {
+                case 1 -> {
+                    if (!discovery) {
+                        System.out.println("=============================================");
+                        System.out.println("Mutual Friends:");
+                        List<String> mutualList = map.get(user.getCredentials().getUsername());
+                        Main.Print_Friends_List(mutualList != null ? mutualList : new ArrayList<>());
+                        System.out.println("=============================================");
+                    }
+                }case 2 -> {
                     System.out.println("=============================================");
                     Send_Friend_Request(user);
-                }case 3->{
-                    // yeah soon
-                }case 0->{
+                }case 3 -> {
+                    // creamy handle this shit
+                }case 0 -> {
                     return;
                 }
+                default -> System.out.println("Invalid Choice!");
             }
         }
     }
+
 
     public static void Searching_By_Name(String n){
         String searchName = Main.Input_String(n);
@@ -880,7 +937,8 @@ public class Page {
     public static void home_page(){
         while (Main.current!=null){
             Database.Compute_Read_Unread();
-            ArrayList<Game_Invite> invites = Database.Load_Game_Invites();
+            int invites = Database.Load_Game_InvitesSize();
+            int Unread = Database.Load_Unread_Notification().size();
             System.out.println("Logged in as: "+Main.current.getCredentials().getUsername());
             System.out.println("__________________________________________");
             System.out.println("           FACEBOOK HOME PAGE");
@@ -890,9 +948,8 @@ public class Page {
             System.out.println("            3- Find Friends");
             System.out.println("            4- View Feed");
             System.out.println("            5- Create Post");
-            int Unread = Database.Load_Unread_Notification().size();
             System.out.println("            6- Notifications" + (Unread > 0 ? " ("+Unread+" new)" : ""));
-            System.out.println("            7- Facebook Games  "+ ((invites.size()>0)? "("+ (invites.size())+")" : ""));
+            System.out.println("            7- Facebook Games  "+ ((invites>0)? "("+ invites+")" : ""));
             System.out.println("            8- Settings");
             System.out.println("            9- Refresh Page");
             System.out.println("------------------------------------------");

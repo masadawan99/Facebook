@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Database {
 
-    private static final File Dadyfolder = new File("G:\\Shared drives\\Facebook\\Testing\\Database");
+    private static final File Dadyfolder = new File("G:\\Shared drives\\Facebook\\Database");
     private static final File Userfolder= new File(Dadyfolder,"Users");
     private static final File Inboxfolder= new File(Dadyfolder,"Inboxes");
     private static final File Messagesfolder = new File(Dadyfolder,"Messages");
@@ -137,6 +137,12 @@ public class Database {
         File fldr = new File(GameseInvitesfldr,Main.current.getCredentials().getUsername());
         File file = new File(fldr,invite.getFilepath()+invite.getGame().getName());
         file.delete();
+    }
+
+    public static int Load_Game_InvitesSize(){
+        File fldr = new File(GameseInvitesfldr,Main.current.getCredentials().getUsername());
+        File []files = fldr.listFiles();
+        return files.length;
     }
 
     public static ArrayList<Game_Invite> Load_Game_Invites(){
@@ -508,6 +514,21 @@ public class Database {
             out.writeObject(reciever);
         }catch (Exception s){
             System.out.println("Error Writing file");
+        }
+    }
+
+    public static void Delete_Friend_Chat(String friend){
+        String curr = Main.current.getCredentials().getUsername();
+        String path = (Alphabetizefilename(curr,friend) + ".dat");
+        File dir = new File(Inboxfolder,curr);
+        File file = new File(dir,path);
+        if(file.exists()){
+            File chat = new File(Messagesfolder,path);
+            deleteFolderRecursive(file);
+            deleteFolderRecursive(chat);
+            File fldr1 = new File(Inboxfolder,friend);
+            File file1 = new File(fldr1,path);
+            file1.delete();
         }
     }
 
@@ -904,9 +925,10 @@ public class Database {
         deleteFolderRecursive(new File(FriendRequestsSentfolder, u));
         deleteFolderRecursive(new File(Postsfolder, u));
         deleteFolderRecursive(new File(Inboxfolder, u));
+        deleteFolderRecursive(new File(Feedsfolder,u));
         deleteFolderRecursive(new File(Notificationsfolder, u));
         deleteFolderRecursive(new File(GameseInvitesfldr,u));
-
+        deleteFolderRecursive(new File(Snakegamefldr,u));
     }
 
     private static void deleteFolderRecursive(File folder){
@@ -1092,6 +1114,101 @@ public class Database {
         for (File f : files) f.delete();
         read = new ArrayList<>();
         unread = new ArrayList<>();
+    }
+
+    public static List<String> Load_Everyone3_6() {
+        String username = Main.current.getCredentials().getUsername();
+        int maxDepth = 6;
+        HashSet<String> level1 = Database.Load_Friends_Hash(username);
+        HashSet<String> level2 = new HashSet<>();
+        for (String f : level1) {
+            HashSet<String> fFriends = Database.Load_Friends_Hash(f);
+            level2.addAll(fFriends);
+        }
+        HashSet<String> visited = new HashSet<>();
+        visited.add(username);
+        visited.addAll(level1);
+        visited.addAll(level2);
+
+        Queue<BFSNode> queue = new LinkedList<>();
+
+        for (String f : level1) {
+            queue.add(new BFSNode(f, 1));
+        }
+
+        HashSet<String> result = new HashSet<>();
+
+        while (!queue.isEmpty()) {
+            BFSNode node = queue.poll();
+            String user = node.user;
+            int depth = node.depth;
+
+            if (depth >= maxDepth) continue;
+
+            HashSet<String> neighbors = Database.Load_Friends_Hash(user);
+
+            for (String n : neighbors) {
+                if (!visited.contains(n)) {
+                    visited.add(n);
+
+                    int nextDepth = depth + 1;
+                    queue.add(new BFSNode(n, nextDepth));
+                    if (nextDepth >= 3 && nextDepth <= 6) {
+                        result.add(n);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(result);
+    }
+
+
+    public static List<String> Load_everyone5() {
+        String username = Main.current.getCredentials().getUsername();
+        int maxDepth = 5;
+        HashSet<String> userFriends = Database.Load_Friends_Hash(username);
+        HashSet<String> visited = new HashSet<>();
+        visited.add(username);
+        Queue<BFSNode> queue = new LinkedList<>();
+
+        for (String friend : userFriends) {
+            queue.add(new BFSNode(friend, 1));
+            visited.add(friend);
+        }
+
+        HashSet<String> suggestions = new HashSet<>();
+
+        while (!queue.isEmpty()) {
+            BFSNode current = queue.poll();
+            String currentUser = current.user;
+            int depth = current.depth;
+
+            if (depth >= maxDepth) continue;
+
+            HashSet<String> friendsOfCurrent = Database.Load_Friends_Hash(currentUser);
+
+            for (String f : friendsOfCurrent) {
+                if (!visited.contains(f)) {
+                    visited.add(f);
+                    queue.add(new BFSNode(f, depth + 1));
+                    if (!userFriends.contains(f)) {
+                        suggestions.add(f);
+                    }
+                }
+            }
+        }
+        return new ArrayList<>(suggestions);
+    }
+
+    static class BFSNode {
+        String user;
+        int depth;
+
+        BFSNode(String user, int depth) {
+            this.user = user;
+            this.depth = depth;
+        }
     }
 
 }

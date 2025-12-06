@@ -431,6 +431,7 @@ public class Main {
 
     public static void Input_Post(){
         String content = Input_String("Post content");
+        String curr = Main.current.getCredentials().getUsername();
         ArrayList<String> tagged = new ArrayList<>();
         while (true){
             System.out.println("=========================================");
@@ -451,29 +452,32 @@ public class Main {
             System.out.println("=========================================");
             switch (Input_Int("Choice")){
                 case 1->{
-                    Post post = new Post(content, current.getCredentials().getUsername());
+                    Post post = new Post(content, curr);
                     post.setTagged(tagged);
                     String path = Database.Write_Post(post);
-                    Database.WriteFeed(path,Main.current.getCredentials().getUsername(),post);
-                    Add_in_Feed(tagged,path,post);
+                    Database.WriteFeed(path,curr,post);
+                    Add_in_Feed(tagged,path,post,true);
                     System.out.println("Posted!");
                     boolean running = true;
                     while (running){
+                        running = false;
                         System.out.println("=========================================");
                         System.out.println("Chose whom do you want the post to see?");
                         System.out.println("1- Friends only");
                         System.out.println("2- Friends of Friends ");
+                        System.out.println("3- Everyone");
                         System.out.println("=========================================");
                         switch (Input_Int("Choice")){
                             case 1->{
-                                Add_in_Feed(Database.Load_Friends(Main.current.getCredentials().getUsername()),path,post);
-                                running = false;
+                                Add_in_Feed(Database.Load_Friends(curr),path,post,false);
                             }case 2->{
-                                Add_in_Feed(Database.Load_Friends(Main.current.getCredentials().getUsername()),path,post);
-                                Add_in_Feed(Database.Load_Friend_of_Friends(),path,post);
-                                running = false;
+                                Add_in_Feed(Database.Load_Friends(curr),path,post,false);
+                                Add_in_Feed(Database.Load_Friend_of_Friends(),path,post,false);
+                            }case 3->{
+                                Add_in_Feed(Database.Load_everyone5(),path,post,false);
                             }default -> {
                                 System.out.println("Invalid Choice!");
+                                running = true;
                             }
                         }
                     }
@@ -502,11 +506,13 @@ public class Main {
         }
     }
 
-    public static void Add_in_Feed(List<String> friends, String path,Post post){
+
+    public static void Add_in_Feed(List<String> friends, String path,Post post, boolean tagged){
         for(String f: friends){
             Database.WriteFeed(path,f,post);
-
-            Database.Write_Notification(f,Input_NotificationT());
+            if(tagged){
+                Database.Write_Notification(f,Input_NotificationT());
+            }
         }
     }
 
