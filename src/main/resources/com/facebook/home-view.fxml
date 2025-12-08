@@ -29,8 +29,8 @@
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER" spacing="5.0">
                <children>
-                  <Button styleClass="nav-icon-button, active" text="🏠" />
-                  <Button styleClass="nav-icon-button" text="👥" />
+                  <Button fx:id="homeButton" styleClass="nav-icon-button, active" text="🏠" />
+                  <Button fx:id="friendsNavButton" styleClass="nav-icon-button" text="👥" />
                   <Button styleClass="nav-icon-button" text="📺" />
                   <Button styleClass="nav-icon-button" text="🏪" />
                   <Button styleClass="nav-icon-button" text="🎮" />
@@ -40,8 +40,8 @@
             <HBox alignment="CENTER_RIGHT" spacing="10.0">
                <children>
                   <Button styleClass="round-button" text="⋮" />
-                  <Button styleClass="round-button" text="💬" />
-                  <Button styleClass="round-button" text="🔔" />
+                  <Button fx:id="messagesButton" styleClass="round-button" text="💬" />
+                  <Button fx:id="notificationsButton" styleClass="round-button" text="🔔" />
                   <Button fx:id="profileButton" styleClass="round-button" text="👤" />
                   <Button fx:id="logoutButton" styleClass="round-button" text="🚪" />
                </children>
@@ -60,6 +60,7 @@
                    <children>
                       <Button fx:id="sidebarProfile" alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="User Name" />
                       <Button fx:id="friendsButton" alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="👥 Friends" />
+                      <Button fx:id="findFriendsSidebarButton" alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="🔍 Find Friends" />
                       <Button alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="🕒 Memories" />
                       <Button alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="🔖 Saved" />
                       <Button alignment="BASELINE_LEFT" maxWidth="Infinity" styleClass="sidebar-item" text="👥 Groups" />
@@ -128,6 +129,7 @@
                            <children>
                               <Label style="-fx-background-color: #ddd; -fx-background-radius: 50%; -fx-min-width: 40px; -fx-min-height: 40px; -fx-alignment: center;" text="👤" />
                               <TextField fx:id="postInput" promptText="What's on your mind?" styleClass="search-field" HBox.hgrow="ALWAYS" />
+                              <Button fx:id="postButton" text="Post" styleClass="button" />
                            </children>
                         </HBox>
                         <Separator />

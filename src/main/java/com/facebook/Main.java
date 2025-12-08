@@ -14,6 +14,7 @@ public class Main {
 
         if (Database.Check_Database()) {
             System_Start();
+
         }
     }
 
