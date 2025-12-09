@@ -16,8 +16,8 @@ public class Page {
             System.out.println("__________________________________________");
             switch (Main.Input_Int("Choice")){
                 case 1->{
-                   Main.Login();
-                   if(Main.current!=null) return true;
+                    Main.Login();
+                    if(Main.current!=null) return true;
                 }case 2->{
                     Main.Create_Account();
                 }case 3->{

@@ -1,8 +1,17 @@
 package com.facebook;
+
 import javax.swing.*;
+import javax.swing.border.LineBorder;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class SnakeGame extends Game {
     public SnakeGame() {
@@ -11,261 +20,360 @@ public class SnakeGame extends Game {
 
     @Override
     public void Game_launch() {
-        new GameFrame();
+        SwingUtilities.invokeLater(() -> new GameFrame());
     }
 }
+
 class GameFrame extends JFrame {
     GamePanel panel;
 
     GameFrame() {
-        panel = new GamePanel();
+        this.setTitle("Snake Game - Premium");
+        panel = new GamePanel(this);
         this.setContentPane(panel);
-        panel.setPreferredSize(new Dimension(panel.DESIRED_WIDTH, panel.DESIRED_HEIGHT));
         this.setResizable(false);
-        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        this.pack();
-        int fudge = 10;
-        this.setSize(this.getWidth() - fudge, this.getHeight() - fudge);
-
-        Dimension size = panel.getSize();
-        panel.computePlayableArea(size.width, size.height);
-        this.addWindowListener(new java.awt.event.WindowAdapter() {
-            public void windowClosing(java.awt.event.WindowEvent e) {
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (panel.timer != null)
+                    panel.timer.stop();
+                dispose();
             }
         });
 
+        this.pack();
         this.setLocationRelativeTo(null);
         this.setVisible(true);
-        panel.requestFocusInWindow();
     }
 }
 
-
 class GamePanel extends JPanel implements ActionListener {
 
-    final int DESIRED_WIDTH = 800;
-    final int DESIRED_HEIGHT = 700;
-    final int UNIT_SIZE = 25;
-    final int INFO_PANEL_HEIGHT = 50;
-    final int borderThickness = 20;
+    // Dimensions
+    static final int SCREEN_WIDTH = 800;
+    static final int SCREEN_HEIGHT = 700;
+    static final int UNIT_SIZE = 25;
+    static final int GAME_UNITS = (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
 
-    int delay = 200;
-    int speedUps = 0;
-    final int MAX_SPEEDUPS = 5;
+    // Game Logic
+    int delay = 80;
+    final int x[] = new int[GAME_UNITS];
+    final int y[] = new int[GAME_UNITS];
+    int bodyParts = 5;
+    int applesEaten;
+    int appleX;
+    int appleY;
+    char direction = 'R';
+    float appleScale = 1.0f;
+    boolean appleGrowing = true;
+
+    // Logic States
+    enum State {
+        MENU, RUNNING, PAUSED
+    }
+
+    State currentState = State.MENU;
+    boolean gameStartedOnce = false;
 
     Timer timer;
     Random random;
 
-    int cols;
-    int rows;
+    // UI Helpers
+    private JFrame parentFrame;
+    private JButton btnPause;
 
-    int playableLeft, playableTop, playableRight, playableBottom;
+    // Menu Components
+    private JPanel menuPanel;
 
-    final int GAME_UNITS = (DESIRED_WIDTH * DESIRED_HEIGHT) / UNIT_SIZE;
-    int x[] = new int[GAME_UNITS];
-    int y[] = new int[GAME_UNITS];
+    // Colors
+    private final Color CLR_BG = Color.decode("#121212");
+    private final Color CLR_PANEL = Color.decode("#1E1E1E");
+    private final Color CLR_ACCENT = Color.decode("#FF4500"); // OrangeRed
+    private final Color CLR_ACCENT_SEC = Color.decode("#FFA500"); // Orange
+    private final Color CLR_TEXT = Color.decode("#E0E0E0");
+    private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 48);
+    private final Font FONT_BTN = new Font("Segoe UI", Font.BOLD, 18);
 
-    int bodyParts = 3;
-    int applesEaten = 0;
-    int highScore = 0;
-
-    int appleX;
-    int appleY;
-
-    char direction = 'R';
-    boolean paused = false;
-
-    enum GameState { INCOMING, RUNNING, GAMEOVER, PAUSED }
-    GameState state = GameState.INCOMING;
-
-    GamePanel() {
+    GamePanel(JFrame parent) {
+        this.parentFrame = parent;
         random = new Random();
-        this.setBackground(Color.black);
+        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        this.setBackground(CLR_BG);
         this.setFocusable(true);
+        this.setLayout(null);
         this.addKeyListener(new MyKeyAdapter());
+
+        setupUI();
+        showMenu();
+
+        timer = new Timer(delay, this);
     }
 
-    public void computePlayableArea(int actualWidth, int actualHeight) {
-        playableLeft = borderThickness;
-        playableTop = INFO_PANEL_HEIGHT + borderThickness;
+    private void setupUI() {
+        // Persistent Pause Button
+        btnPause = new JButton("II") {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
+                g2.setColor(getForeground());
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = (getHeight() + fm.getAscent()) / 2 - 2;
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
+        btnPause.setBounds(SCREEN_WIDTH - 60, 20, 40, 40);
+        btnPause.setBackground(CLR_PANEL);
+        btnPause.setForeground(CLR_TEXT);
+        btnPause.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        btnPause.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnPause.setBorderPainted(false);
+        btnPause.setFocusPainted(false);
+        btnPause.setVisible(false);
+        btnPause.addActionListener(e -> pauseGame());
 
-        int maxPlayableWidth = actualWidth - 2 * borderThickness;
-        int maxPlayableHeight = actualHeight - INFO_PANEL_HEIGHT - 2 * borderThickness;
+        this.add(btnPause);
 
-        cols = maxPlayableWidth / UNIT_SIZE;
-        rows = maxPlayableHeight / UNIT_SIZE;
+        // Menu Panel
+        menuPanel = new JPanel();
+        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+        menuPanel.setBackground(CLR_BG);
+        menuPanel.setBounds(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-        playableRight = playableLeft + (cols - 1) * UNIT_SIZE;
-        playableBottom = playableTop + (rows - 1) * UNIT_SIZE;
+        JLabel title = new JLabel("SNAKE GAME");
+        title.setFont(FONT_HEADER);
+        title.setForeground(CLR_ACCENT);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        highScore = Database.Load_HighScore();
+        menuPanel.add(Box.createVerticalGlue());
+        menuPanel.add(title);
+        menuPanel.add(Box.createVerticalStrut(50));
+
+        addMenuButton("NEW GAME", e -> showDifficultyDialog());
+        addMenuButton("CONTINUE", e -> continueGame());
+        addMenuButton("SCOREBOARD", e -> showFriendScoreboard());
+        addMenuButton("EXIT", e -> parentFrame.dispose());
+
+        menuPanel.add(Box.createVerticalGlue());
+
+        this.add(menuPanel);
     }
 
-    public void startGame() {
-        state = GameState.RUNNING;
-        paused = false;
+    private void addMenuButton(String text, ActionListener al) {
+        JButton btn = new JButton(text) {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (getModel().isRollover()) {
+                    g2.setColor(CLR_ACCENT);
+                } else {
+                    g2.setColor(CLR_PANEL);
+                }
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                g2.setColor(CLR_TEXT);
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = (getHeight() + fm.getAscent()) / 2 - 4;
+                g2.drawString(getText(), x, y);
+                g2.dispose();
+            }
+        };
+        btn.setFont(FONT_BTN);
+        btn.setForeground(CLR_TEXT);
+        btn.setBackground(CLR_PANEL);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setMaximumSize(new Dimension(300, 60));
+        btn.setPreferredSize(new Dimension(300, 60));
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.addActionListener(al);
 
-        delay = 200;
-        speedUps = 0;
-        applesEaten = 0;
-        bodyParts = 3;
-        direction = 'R';
-
-        int centerCol = cols / 2;
-        int centerRow = rows / 2;
-        x[0] = playableLeft + centerCol * UNIT_SIZE;
-        y[0] = playableTop + centerRow * UNIT_SIZE;
-
-        for (int i = 1; i < bodyParts; i++) {
-            x[i] = x[0] - i * UNIT_SIZE;
-            y[i] = y[0];
+        // Hide Continue if game not started
+        if (text.equals("CONTINUE")) {
+            btn.setVisible(false); // Initially hidden
+            btn.setName("BTN_CONTINUE");
         }
 
-        for (int i = bodyParts; i < GAME_UNITS; i++) {
-            x[i] = 0;
-            y[i] = 0;
+        menuPanel.add(btn);
+        menuPanel.add(Box.createVerticalStrut(20));
+    }
+
+    private void showMenu() {
+        currentState = State.MENU;
+        menuPanel.setVisible(true);
+        btnPause.setVisible(false);
+
+        // Toggle Continue Button
+        for (Component c : menuPanel.getComponents()) {
+            if (c instanceof JButton && "BTN_CONTINUE".equals(c.getName())) {
+                c.setVisible(gameStartedOnce);
+            }
+        }
+        repaint();
+    }
+
+    private void startNewGameWithDifficulty(int speedDelay) {
+        menuPanel.setVisible(false);
+        bodyParts = 5;
+        applesEaten = 0;
+        direction = 'R';
+        delay = speedDelay;
+        currentState = State.RUNNING;
+        gameStartedOnce = true;
+        btnPause.setVisible(true);
+
+        // Center Snake
+        int centerX = (SCREEN_WIDTH / UNIT_SIZE) / 2 * UNIT_SIZE;
+        int centerY = (SCREEN_HEIGHT / UNIT_SIZE) / 2 * UNIT_SIZE;
+
+        for (int i = 0; i < bodyParts; i++) {
+            x[i] = centerX - (i * UNIT_SIZE);
+            y[i] = centerY;
         }
 
         newApple();
-
-        if (timer != null) timer.stop();
-        timer = new Timer(delay, this);
+        timer.setDelay(delay);
         timer.start();
+        requestFocusInWindow();
+    }
+
+    private void continueGame() {
+        if (!gameStartedOnce)
+            return;
+        menuPanel.setVisible(false);
+        currentState = State.RUNNING;
+        btnPause.setVisible(true);
+        timer.start();
+        requestFocusInWindow();
+    }
+
+    private void pauseGame() {
+        currentState = State.PAUSED;
+        timer.stop();
+        showPauseDialog();
     }
 
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        requestFocusInWindow();
-
-        switch (state) {
-            case INCOMING -> drawIncomingScreen(g);
-            case RUNNING -> drawGame(g);
-            case GAMEOVER -> drawGameOver(g);
-            case PAUSED -> drawGame(g);
+        if (currentState != State.MENU) {
+            drawGame(g);
         }
     }
 
-    private void drawIncomingScreen(Graphics g) {
-        g.setColor(Color.white);
-        g.setFont(new Font("Ink Free", Font.BOLD, 60));
-        g.drawString("WELCOME TO SNAKE", DESIRED_WIDTH / 2 - 300, DESIRED_HEIGHT / 2 - 50);
-        g.setFont(new Font("Ink Free", Font.PLAIN, 30));
-        g.drawString("Press ENTER to Start", DESIRED_WIDTH / 2 - 150, DESIRED_HEIGHT / 2 + 50);
-    }
+    public void drawGame(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-    private void drawGame(Graphics g) {
-        g.setColor(Color.darkGray);
-        g.fillRect(0, 0, DESIRED_WIDTH, INFO_PANEL_HEIGHT);
-        g.setColor(Color.white);
-        g.setFont(new Font("Ink Free", Font.BOLD, 25));
-        g.drawString("Score: " + applesEaten, 10, 30);
-        g.drawString("High Score: " + highScore, DESIRED_WIDTH - 200, 30);
+        // Draw Score Header
+        g2.setColor(CLR_PANEL);
+        g2.fill(new RoundRectangle2D.Float(20, 20, 150, 40, 10, 10));
+        g2.setColor(CLR_TEXT);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        g2.drawString("Score: " + applesEaten, 35, 46);
 
-        g.setColor(Color.white);
-        g.fillRect(0, INFO_PANEL_HEIGHT, DESIRED_WIDTH, borderThickness); // top
-        g.fillRect(0, INFO_PANEL_HEIGHT + borderThickness, borderThickness, getHeight() - INFO_PANEL_HEIGHT - borderThickness); // left
-        g.fillRect(getWidth() - borderThickness, INFO_PANEL_HEIGHT + borderThickness, borderThickness, getHeight() - INFO_PANEL_HEIGHT - borderThickness); // right
-        g.fillRect(0, getHeight() - borderThickness, getWidth(), borderThickness); // bottom
+        // Draw Apple (Pulse)
+        int aSize = (int) (UNIT_SIZE * appleScale);
+        int offset = (UNIT_SIZE - aSize) / 2;
+        g2.setColor(Color.RED);
+        g2.fillOval(appleX + offset, appleY + offset, aSize, aSize);
+        // Shine
+        g2.setColor(new Color(255, 150, 150));
+        g2.fillOval(appleX + offset + 4, appleY + offset + 4, aSize / 3, aSize / 3);
 
-        g.setColor(Color.red);
-        g.fillOval(appleX, appleY, UNIT_SIZE, UNIT_SIZE);
-
+        // Draw Snake
         for (int i = 0; i < bodyParts; i++) {
-            g.setColor(i == 0 ? Color.green : new Color(45, 180, 0));
-            g.fillRect(x[i], y[i], UNIT_SIZE, UNIT_SIZE);
+            if (i == 0) { // Head
+                g2.setColor(CLR_ACCENT);
+                g2.fillRoundRect(x[i], y[i], UNIT_SIZE, UNIT_SIZE, 12, 12);
+            } else { // Body
+                g2.setColor(CLR_ACCENT_SEC);
+                g2.fillRoundRect(x[i] + 2, y[i] + 2, UNIT_SIZE - 4, UNIT_SIZE - 4, 8, 8);
+            }
         }
 
-        if (paused) {
-            g.setColor(Color.yellow);
-            g.setFont(new Font("Ink Free", Font.BOLD, 60));
-            g.drawString("PAUSED", DESIRED_WIDTH / 2 - 120, DESIRED_HEIGHT / 2);
+        // Pause Overlay
+        if (currentState == State.PAUSED) {
+            g2.setColor(new Color(0, 0, 0, 150));
+            g2.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         }
     }
 
-    private void drawGameOver(Graphics g) {
-        g.setColor(Color.red);
-        g.setFont(new Font("Ink Free", Font.BOLD, 75));
-        FontMetrics m1 = getFontMetrics(g.getFont());
-        g.drawString("Game Over", (DESIRED_WIDTH - m1.stringWidth("Game Over")) / 2, DESIRED_HEIGHT / 2 - 50);
-
-        g.setColor(Color.white);
-        g.setFont(new Font("Ink Free", Font.BOLD, 30));
-        FontMetrics m2 = getFontMetrics(g.getFont());
-        g.drawString("Score: " + applesEaten, (DESIRED_WIDTH - m2.stringWidth("Score: " + applesEaten)) / 2, DESIRED_HEIGHT / 2 + 10);
-
-        g.setFont(new Font("Ink Free", Font.PLAIN, 26));
-        g.drawString("Press ENTER to Restart", (DESIRED_WIDTH - 260) / 2, DESIRED_HEIGHT / 2 + 60);
-        g.drawString("Press ESC to Exit", (DESIRED_WIDTH - 220) / 2, DESIRED_HEIGHT / 2 + 100);
+    public void newApple() {
+        appleX = random.nextInt((int) (SCREEN_WIDTH / UNIT_SIZE)) * UNIT_SIZE;
+        appleY = random.nextInt((int) (SCREEN_HEIGHT / UNIT_SIZE)) * UNIT_SIZE;
     }
 
     public void move() {
-        if (paused) return;
         for (int i = bodyParts; i > 0; i--) {
             x[i] = x[i - 1];
             y[i] = y[i - 1];
         }
         switch (direction) {
-            case 'U' -> y[0] -= UNIT_SIZE;
-            case 'D' -> y[0] += UNIT_SIZE;
-            case 'L' -> x[0] -= UNIT_SIZE;
-            case 'R' -> x[0] += UNIT_SIZE;
+            case 'U' -> y[0] = y[0] - UNIT_SIZE;
+            case 'D' -> y[0] = y[0] + UNIT_SIZE;
+            case 'L' -> x[0] = x[0] - UNIT_SIZE;
+            case 'R' -> x[0] = x[0] + UNIT_SIZE;
         }
     }
 
     public void checkApple() {
-        if (x[0] == appleX && y[0] == appleY) {
-            applesEaten++;
+        if ((x[0] == appleX) && (y[0] == appleY)) {
             bodyParts++;
-            if (applesEaten > highScore) {
-                highScore = applesEaten;
-                Database.Write_HighsSore(highScore);
-            }
-            if (applesEaten % 5 == 0 && speedUps < MAX_SPEEDUPS) {
-                speedUps++;
-                delay = Math.max(50, delay - 20);
+            applesEaten++;
+            newApple();
+            Database.Write_HighsSore(applesEaten);
+            if (delay > 40) { // Minimal speed up as we have difficulty modes now
+                delay -= 1;
                 timer.setDelay(delay);
             }
-            newApple();
         }
     }
 
     public void checkCollisions() {
         for (int i = bodyParts; i > 0; i--) {
-            if (x[0] == x[i] && y[0] == y[i]) state = GameState.GAMEOVER;
+            if ((x[0] == x[i]) && (y[0] == y[i])) {
+                gameOver();
+            }
         }
-
-        if (x[0] < playableLeft || x[0] > playableRight || y[0] < playableTop || y[0] > playableBottom) {
-            state = GameState.GAMEOVER;
+        if (x[0] < 0 || x[0] >= SCREEN_WIDTH || y[0] < 0 || y[0] >= SCREEN_HEIGHT) {
+            gameOver();
         }
-
-        if (state == GameState.GAMEOVER && timer != null) timer.stop();
     }
 
-    public void newApple() {
-        int attempts = 0;
-        do {
-            appleX = playableLeft + random.nextInt(cols) * UNIT_SIZE;
-            appleY = playableTop + random.nextInt(rows) * UNIT_SIZE;
-            attempts++;
-            if (attempts > 1000) break;
-        } while (isAppleOnSnake());
+    private void gameOver() {
+        timer.stop();
+        gameStartedOnce = false;
+        showGameOverDialog();
     }
 
-    private boolean isAppleOnSnake() {
-        for (int i = 0; i < bodyParts; i++) {
-            if (x[i] == appleX && y[i] == appleY) return true;
+    private void animate() {
+        if (appleGrowing) {
+            appleScale += 0.05f;
+            if (appleScale >= 1.2f)
+                appleGrowing = false;
+        } else {
+            appleScale -= 0.05f;
+            if (appleScale <= 0.9f)
+                appleGrowing = true;
         }
-        return false;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (state == GameState.RUNNING && !paused) {
+        if (currentState == State.RUNNING) {
             move();
             checkApple();
             checkCollisions();
+            animate();
         }
         repaint();
     }
@@ -273,19 +381,304 @@ class GamePanel extends JPanel implements ActionListener {
     public class MyKeyAdapter extends KeyAdapter {
         @Override
         public void keyPressed(KeyEvent e) {
+            if (currentState != State.RUNNING)
+                return;
             switch (e.getKeyCode()) {
-                case KeyEvent.VK_LEFT -> { if (direction != 'R') direction = 'L'; }
-                case KeyEvent.VK_RIGHT -> { if (direction != 'L') direction = 'R'; }
-                case KeyEvent.VK_UP -> { if (direction != 'D') direction = 'U'; }
-                case KeyEvent.VK_DOWN -> { if (direction != 'U') direction = 'D'; }
-                case KeyEvent.VK_ENTER -> { if (state == GameState.INCOMING || state == GameState.GAMEOVER) startGame(); }
-                case KeyEvent.VK_ESCAPE -> {
-                    SwingUtilities.getWindowAncestor((Component)e.getSource()).dispose();
+                case KeyEvent.VK_LEFT -> {
+                    if (direction != 'R')
+                        direction = 'L';
                 }
-                case KeyEvent.VK_P -> { if (state == GameState.RUNNING) paused = !paused; }
+                case KeyEvent.VK_RIGHT -> {
+                    if (direction != 'L')
+                        direction = 'R';
+                }
+                case KeyEvent.VK_UP -> {
+                    if (direction != 'D')
+                        direction = 'U';
+                }
+                case KeyEvent.VK_DOWN -> {
+                    if (direction != 'U')
+                        direction = 'D';
+                }
+                case KeyEvent.VK_ESCAPE -> pauseGame();
+                case KeyEvent.VK_P -> pauseGame();
             }
         }
     }
 
+    // ==========================================
+    // Custom Dialogs & Logic
+    // ==========================================
+    private JButton createDialogButton(String text) {
+        JButton btn = new JButton(text) {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setForeground(CLR_TEXT);
+        btn.setBackground(CLR_PANEL);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(180, 45));
+        btn.setMaximumSize(new Dimension(180, 45));
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(CLR_ACCENT);
+            }
 
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(CLR_PANEL);
+            }
+        });
+        return btn;
+    }
+
+    private void showDifficultyDialog() {
+        JDialog d = new JDialog(parentFrame, "Select Difficulty", true);
+        d.setUndecorated(true);
+        d.setSize(400, 350);
+        d.setLocationRelativeTo(parentFrame);
+
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(CLR_PANEL);
+        p.setBorder(new LineBorder(CLR_ACCENT, 2));
+
+        JLabel l = new JLabel("SELECT DIFFICULTY");
+        l.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        l.setForeground(CLR_ACCENT);
+        l.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton btnEasy = createDialogButton("EASY");
+        JButton btnMed = createDialogButton("MEDIUM");
+        JButton btnHard = createDialogButton("HARD");
+        JButton btnBack = createDialogButton("BACK");
+
+        btnEasy.addActionListener(e -> {
+            d.dispose();
+            startNewGameWithDifficulty(140);
+        });
+        btnMed.addActionListener(e -> {
+            d.dispose();
+            startNewGameWithDifficulty(90);
+        });
+        btnHard.addActionListener(e -> {
+            d.dispose();
+            startNewGameWithDifficulty(50);
+        });
+        btnBack.addActionListener(e -> d.dispose());
+
+        p.add(Box.createVerticalStrut(30));
+        p.add(l);
+        p.add(Box.createVerticalStrut(30));
+        p.add(btnEasy);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnMed);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnHard);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnBack);
+
+        d.add(p);
+        d.setVisible(true);
+    }
+
+    private void showGameOverDialog() {
+        JDialog d = new JDialog(parentFrame, "Game Over", true);
+        d.setUndecorated(true);
+        d.setSize(400, 300);
+        d.setLocationRelativeTo(parentFrame);
+
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(CLR_BG); // Darker
+        p.setBorder(new LineBorder(CLR_ACCENT, 2));
+
+        JLabel l = new JLabel("GAME OVER");
+        l.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        l.setForeground(Color.RED);
+        l.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel s = new JLabel("Score: " + applesEaten);
+        s.setFont(new Font("Segoe UI", Font.PLAIN, 24));
+        s.setForeground(CLR_TEXT);
+        s.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton btnReplay = createDialogButton("RETRY");
+        JButton btnMenu = createDialogButton("MENU");
+
+        btnReplay.addActionListener(e -> {
+            d.dispose();
+            showDifficultyDialog();
+        });
+
+        btnMenu.addActionListener(e -> {
+            d.dispose();
+            showMenu();
+        });
+
+        p.add(Box.createVerticalStrut(30));
+        p.add(l);
+        p.add(Box.createVerticalStrut(10));
+        p.add(s);
+        p.add(Box.createVerticalStrut(30));
+        p.add(btnReplay);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnMenu);
+        p.add(Box.createVerticalGlue());
+
+        d.add(p);
+        d.setVisible(true);
+    }
+
+    private void showPauseDialog() {
+        JDialog d = new JDialog(parentFrame, "Paused", true);
+        d.setUndecorated(true);
+        d.setSize(300, 250);
+        d.setLocationRelativeTo(parentFrame);
+
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(CLR_BG);
+        p.setBorder(new LineBorder(CLR_ACCENT, 2));
+
+        JLabel l = new JLabel("PAUSED");
+        l.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        l.setForeground(CLR_TEXT);
+        l.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton btnResume = createDialogButton("RESUME");
+        JButton btnMenu = createDialogButton("MENU");
+
+        btnResume.addActionListener(e -> {
+            d.dispose();
+            currentState = State.RUNNING;
+            timer.start();
+        });
+
+        btnMenu.addActionListener(e -> {
+            d.dispose();
+            showMenu();
+        });
+
+        p.add(Box.createVerticalStrut(30));
+        p.add(l);
+        p.add(Box.createVerticalStrut(30));
+        p.add(btnResume);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnMenu);
+        p.add(Box.createVerticalGlue());
+
+        d.add(p);
+        d.setVisible(true);
+    }
+
+    // ==========================================
+    // Friend Scoreboard Logic
+    // ==========================================
+    private class Info {
+        String name;
+        int score;
+
+        Info(String n, int s) {
+            name = n;
+            score = s;
+        }
+    }
+
+    private void showFriendScoreboard() {
+        JDialog d = new JDialog(parentFrame, "Scoreboard", true);
+        d.setUndecorated(true);
+        d.setSize(400, 500);
+        d.setLocationRelativeTo(parentFrame);
+
+        JPanel main = new JPanel(new BorderLayout());
+        main.setBackground(CLR_BG);
+        main.setBorder(new LineBorder(CLR_ACCENT, 2));
+
+        JLabel head = new JLabel("FRIEND HIGHSCORES", SwingConstants.CENTER);
+        head.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        head.setForeground(CLR_ACCENT);
+        head.setBorder(new EmptyBorder(20, 0, 20, 0));
+        main.add(head, BorderLayout.NORTH);
+
+        DefaultListModel<Info> model = new DefaultListModel<>();
+
+        // 1. Get Current User Score
+        String curr = Main.current.getCredentials().getUsername();
+        int myScore = Database.Load_HighScore();
+        model.addElement(new Info(curr + " (You)", myScore));
+
+        // 2. Get Friends Scores
+        ArrayList<String> friends = Database.Load_Friends(curr);
+        for (String f : friends) {
+            File fldr = new File(Database.Snakegamefldr, f);
+            File file = new File(fldr, "HighScore");
+            int s = 0;
+            if (file.exists()) {
+                try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+                    s = (int) in.readObject();
+                } catch (Exception e) {
+                }
+            }
+            model.addElement(new Info(f, s));
+        }
+
+        // Sort
+        ArrayList<Info> list = new ArrayList<>();
+        for (int i = 0; i < model.size(); i++)
+            list.add(model.get(i));
+        Collections.sort(list, (a, b) -> b.score - a.score);
+        model.clear();
+        for (Info i : list)
+            model.addElement(i);
+
+        JList<Info> jlist = new JList<>(model);
+        jlist.setBackground(CLR_BG);
+        jlist.setCellRenderer(new ListCellRenderer<Info>() {
+            @Override
+            public Component getListCellRendererComponent(JList<? extends Info> list, Info value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JPanel p = new JPanel(new BorderLayout());
+                p.setBackground(isSelected ? CLR_PANEL : CLR_BG);
+                p.setBorder(new EmptyBorder(10, 20, 10, 20));
+
+                JLabel n = new JLabel((index + 1) + ". " + value.name);
+                n.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+                n.setForeground(CLR_TEXT);
+
+                JLabel s = new JLabel(String.valueOf(value.score));
+                s.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                s.setForeground(Color.ORANGE);
+
+                p.add(n, BorderLayout.WEST);
+                p.add(s, BorderLayout.EAST);
+                return p;
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(jlist);
+        scroll.setBorder(null);
+        scroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
+        main.add(scroll, BorderLayout.CENTER);
+
+        JButton btnClose = createDialogButton("CLOSE");
+        btnClose.addActionListener(e -> d.dispose());
+        JPanel btnP = new JPanel();
+        btnP.setBackground(CLR_BG);
+        btnP.add(btnClose);
+        main.add(btnP, BorderLayout.SOUTH);
+
+        d.add(main);
+        d.setVisible(true);
+    }
 }
