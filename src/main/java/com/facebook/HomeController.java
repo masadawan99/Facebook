@@ -285,6 +285,7 @@ public class HomeController implements Initializable {
             Scene scene = new Scene(fxmlLoader.load(), 1000, 700);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setTitle("Facebook - Profile");
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();
@@ -295,11 +296,13 @@ public class HomeController implements Initializable {
 
     private void logout(ActionEvent event) {
         try {
-            Main.current = null; // Clear current user
+            Main.current = null;
+            Database.Delete_Online();
             FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load(), 600, 400);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setTitle("Facebook - Login");
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();
@@ -364,13 +367,14 @@ public class HomeController implements Initializable {
     private void openChat(String friendName) {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("chat-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 500, 600); // Chat window size
+            Scene scene = new Scene(fxmlLoader.load(), 500, 600);
 
             ChatController controller = fxmlLoader.getController();
             controller.initializeChat(friendName);
 
             Stage stage = (Stage) contactsList.getScene().getWindow();
             stage.setTitle("Facebook - Chat with " + friendName);
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();

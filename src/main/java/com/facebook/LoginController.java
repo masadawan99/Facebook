@@ -76,9 +76,10 @@ public class LoginController {
     private void navigateToHome(ActionEvent event) {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("home-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 1000, 700); // Larger size for Home
+            Scene scene = new Scene(fxmlLoader.load(), 1000, 700);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setTitle("Facebook");
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();
@@ -94,6 +95,18 @@ public class LoginController {
         Scene scene = new Scene(fxmlLoader.load(), 600, 500);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setTitle("Facebook Sign Up");
+        stage.setMaximized(true);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @FXML
+    protected void onForgotPasswordClick(ActionEvent event) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("forgot-password-view.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 600, 550);
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        stage.setTitle("Forgot Password");
+        stage.setMaximized(true);
         stage.setScene(scene);
         stage.show();
     }

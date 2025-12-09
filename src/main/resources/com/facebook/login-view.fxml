@@ -17,7 +17,7 @@
    <TextField fx:id="usernameField" maxWidth="350.0" promptText="Email or Phone Number" />
    <PasswordField fx:id="passwordField" maxWidth="350.0" promptText="Password" />
     <Button maxWidth="350.0" onAction="#onLoginButtonClick" text="Log In" />
-   <Button styleClass="transparent" text="Forgot Password?" />
+   <Button styleClass="transparent" text="Forgot Password?" onAction="#onForgotPasswordClick" />
    <Label text="or" />
    <Button styleClass="secondary" mnemonicParsing="false" onAction="#onSignupButtonClick" text="Create New Account" />
    <Label fx:id="errorLabel" styleClass="error-toast" visible="false" />

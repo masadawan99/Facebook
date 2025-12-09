@@ -44,7 +44,8 @@ public class SignupController {
         String password = passwordField.getText();
         String confirmPassword = confirmPasswordField.getText();
 
-        if (firstName.isEmpty() || lastName.isEmpty() || dob == null || bio.isEmpty() || username.isEmpty() || password.isEmpty()) {
+        if (firstName.isEmpty() || lastName.isEmpty() || dob == null || bio.isEmpty() || username.isEmpty()
+                || password.isEmpty()) {
             errorLabel.setText("Please fill in all fields.");
             return;
         }
@@ -89,6 +90,7 @@ public class SignupController {
         Scene scene = new Scene(fxmlLoader.load(), 600, 400);
         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         stage.setTitle("Facebook Login");
+        stage.setMaximized(true);
         stage.setScene(scene);
         stage.show();
     }

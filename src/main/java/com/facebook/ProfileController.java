@@ -172,6 +172,7 @@ public class ProfileController implements Initializable {
             Scene scene = new Scene(fxmlLoader.load(), 1000, 700);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setTitle("Facebook - Home");
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();
@@ -184,10 +185,12 @@ public class ProfileController implements Initializable {
     void onLogoutClick(ActionEvent event) {
         try {
             Main.current = null;
+            Database.Delete_Online();
             FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load(), 600, 400);
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.setTitle("Facebook - Login");
+            stage.setMaximized(true);
             stage.setScene(scene);
             stage.centerOnScreen();
             stage.show();
