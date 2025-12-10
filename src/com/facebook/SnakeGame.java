@@ -69,6 +69,10 @@ class GamePanel extends JPanel implements ActionListener {
     float appleScale = 1.0f;
     boolean appleGrowing = true;
 
+    // Enhanced Logic
+    int scoreMultiplier = 1;
+    int highScore = 0;
+
     // Logic States
     enum State {
         MENU, RUNNING, PAUSED
@@ -220,12 +224,14 @@ class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
-    private void startNewGameWithDifficulty(int speedDelay) {
+    private void startNewGameWithDifficulty(int speedDelay, int multiplier) {
         menuPanel.setVisible(false);
         bodyParts = 5;
         applesEaten = 0;
         direction = 'R';
         delay = speedDelay;
+        scoreMultiplier = multiplier;
+        highScore = Database.Load_HighScore();
         currentState = State.RUNNING;
         gameStartedOnce = true;
         btnPause.setVisible(true);
@@ -275,10 +281,14 @@ class GamePanel extends JPanel implements ActionListener {
 
         // Draw Score Header
         g2.setColor(CLR_PANEL);
-        g2.fill(new RoundRectangle2D.Float(20, 20, 150, 40, 10, 10));
+        g2.fill(new RoundRectangle2D.Float(20, 20, 150, 70, 10, 10)); // Taller for 2 lines
         g2.setColor(CLR_TEXT);
         g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
         g2.drawString("Score: " + applesEaten, 35, 46);
+
+        g2.setColor(Color.GRAY);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        g2.drawString("Best: " + Math.max(applesEaten, highScore), 35, 68);
 
         // Draw Apple (Pulse)
         int aSize = (int) (UNIT_SIZE * appleScale);
@@ -328,12 +338,11 @@ class GamePanel extends JPanel implements ActionListener {
     public void checkApple() {
         if ((x[0] == appleX) && (y[0] == appleY)) {
             bodyParts++;
-            applesEaten++;
+            applesEaten += scoreMultiplier;
             newApple();
-            Database.Write_HighsSore(applesEaten);
-            if (delay > 40) { // Minimal speed up as we have difficulty modes now
-                delay -= 1;
-                timer.setDelay(delay);
+            if (applesEaten > highScore) {
+                Database.Write_HighsSore(applesEaten);
+                highScore = applesEaten;
             }
         }
     }
@@ -445,7 +454,7 @@ class GamePanel extends JPanel implements ActionListener {
     private void showDifficultyDialog() {
         JDialog d = new JDialog(parentFrame, "Select Difficulty", true);
         d.setUndecorated(true);
-        d.setSize(400, 350);
+        d.setSize(400, 300);
         d.setLocationRelativeTo(parentFrame);
 
         JPanel p = new JPanel();
@@ -458,31 +467,26 @@ class GamePanel extends JPanel implements ActionListener {
         l.setForeground(CLR_ACCENT);
         l.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton btnEasy = createDialogButton("EASY");
-        JButton btnMed = createDialogButton("MEDIUM");
-        JButton btnHard = createDialogButton("HARD");
+        JButton btnEasy = createDialogButton("EASY (+1)");
+        JButton btnHard = createDialogButton("HARD (+2)");
         JButton btnBack = createDialogButton("BACK");
 
         btnEasy.addActionListener(e -> {
             d.dispose();
-            startNewGameWithDifficulty(140);
+            startNewGameWithDifficulty(140, 1);
         });
-        btnMed.addActionListener(e -> {
-            d.dispose();
-            startNewGameWithDifficulty(90);
-        });
+
         btnHard.addActionListener(e -> {
             d.dispose();
-            startNewGameWithDifficulty(50);
+            startNewGameWithDifficulty(50, 2);
         });
+
         btnBack.addActionListener(e -> d.dispose());
 
         p.add(Box.createVerticalStrut(30));
         p.add(l);
         p.add(Box.createVerticalStrut(30));
         p.add(btnEasy);
-        p.add(Box.createVerticalStrut(15));
-        p.add(btnMed);
         p.add(Box.createVerticalStrut(15));
         p.add(btnHard);
         p.add(Box.createVerticalStrut(15));
