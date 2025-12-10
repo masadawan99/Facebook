@@ -8,10 +8,8 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Random;
 
 public class SnakeGame extends Game {
     public SnakeGame() {
@@ -179,7 +177,14 @@ class GamePanel extends JPanel implements ActionListener {
                 } else {
                     g2.setColor(CLR_PANEL);
                 }
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
                 g2.setColor(CLR_TEXT);
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
@@ -424,8 +429,20 @@ class GamePanel extends JPanel implements ActionListener {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
-                super.paintComponent(g2);
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = (getHeight() + fm.getAscent()) / 2 - 4;
+                g2.drawString(getText(), x, y);
+
                 g2.dispose();
             }
         };
@@ -434,6 +451,7 @@ class GamePanel extends JPanel implements ActionListener {
         btn.setBackground(CLR_PANEL);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
+        btn.setBorder(null); // No Border
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(180, 45));
@@ -467,8 +485,8 @@ class GamePanel extends JPanel implements ActionListener {
         l.setForeground(CLR_ACCENT);
         l.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton btnEasy = createDialogButton("EASY (+1)");
-        JButton btnHard = createDialogButton("HARD (+2)");
+        JButton btnEasy = createDialogButton("EASY");
+        JButton btnHard = createDialogButton("HARD");
         JButton btnBack = createDialogButton("BACK");
 
         btnEasy.addActionListener(e -> {
@@ -620,7 +638,7 @@ class GamePanel extends JPanel implements ActionListener {
         // 1. Get Current User Score
         String curr = Main.current.getCredentials().getUsername();
         int myScore = Database.Load_HighScore();
-        model.addElement(new Info(curr + " (You)", myScore));
+        model.addElement(new Info("You (" + Main.Get_Fullname(curr) + ")", myScore));
 
         // 2. Get Friends Scores
         ArrayList<String> friends = Database.Load_Friends(curr);
@@ -634,7 +652,7 @@ class GamePanel extends JPanel implements ActionListener {
                 } catch (Exception e) {
                 }
             }
-            model.addElement(new Info(f, s));
+            model.addElement(new Info(Main.Get_Fullname(f), s));
         }
 
         // Sort
@@ -676,6 +694,7 @@ class GamePanel extends JPanel implements ActionListener {
         main.add(scroll, BorderLayout.CENTER);
 
         JButton btnClose = createDialogButton("CLOSE");
+        btnClose.setBorder(null);
         btnClose.addActionListener(e -> d.dispose());
         JPanel btnP = new JPanel();
         btnP.setBackground(CLR_BG);

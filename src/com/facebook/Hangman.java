@@ -76,9 +76,9 @@ public class Hangman extends Game implements Serializable {
         frame.getContentPane().setBackground(CLR_BG);
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                if (onlineTimer != null)
+                if (onlineTimer != null && onlineTimer.isRunning())
                     onlineTimer.stop();
-                if (animTimer != null)
+                if (animTimer != null && animTimer.isRunning())
                     animTimer.stop();
             }
         });
@@ -98,7 +98,16 @@ public class Hangman extends Game implements Serializable {
                 } else {
                     g2.setColor(CLR_PANEL);
                 }
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
+
+                // Background
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                // Thick Border
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
                 g2.setColor(CLR_TEXT);
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
@@ -112,6 +121,7 @@ public class Hangman extends Game implements Serializable {
         btn.setForeground(CLR_TEXT);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
+        btn.setBorder(null); // Explicitly remove border
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(250, 50));
@@ -754,7 +764,7 @@ public class Hangman extends Game implements Serializable {
         ArrayList<String> friends = Database.Load_Friends(curr);
         for (String f : friends) {
             int s = Database.Load_Streak(f);
-            model.addElement(new Info(f, s));
+            model.addElement(new Info(Main.Get_Fullname(f), s));
         }
 
         ArrayList<Info> list = new ArrayList<>();
@@ -789,6 +799,7 @@ public class Hangman extends Game implements Serializable {
         main.add(new JScrollPane(jlist), BorderLayout.CENTER);
 
         JButton btnClose = createStyledButton("CLOSE");
+        btnClose.setBorder(null); // Ensure no border
         btnClose.setPreferredSize(new Dimension(150, 40));
         btnClose.addActionListener(e -> d.dispose());
         JPanel btnP = new JPanel();

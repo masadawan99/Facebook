@@ -7,7 +7,6 @@ import java.io.Serializable;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 
 public class TicTacToe extends Game implements Serializable {
@@ -64,7 +63,7 @@ public class TicTacToe extends Game implements Serializable {
         public BoardButton() {
             setFocusPainted(false);
             setBackground(CLR_PANEL);
-            setBorder(new LineBorder(Color.DARK_GRAY, 1));
+            setBorder(null); // No border
             setContentAreaFilled(false);
         }
 
@@ -121,8 +120,61 @@ public class TicTacToe extends Game implements Serializable {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
-                super.paintComponent(g2);
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                // Thick Border
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
+                super.paintComponent(g2); // Draws text? No, super ignores custom text pos usually if setUI not used,
+                                          // but let's stick to consistent manual draw if needed.
+                // Wait, logic in TicTacToe relied on super.paintComponent?
+                // Checking previous code: "super.paintComponent(g2);" was calling JButton's
+                // paint but with g2 context?
+                // Actually previous code did `super.paintComponent(g2)` after filling
+                // background.
+                // JButton's paintComponent paints text/icon.
+                // If I want thick border ON TOP, I should draw it after super.
+                // But wait, I set contentAreaFilled false.
+
+                g2.dispose();
+
+                // Re-do to ensure text is visible and on top or handle manual text drawing like
+                // Hangman for consistency?
+                // The previous code used super.paintComponent(g2).
+                // Let's replicate manual text drawing for "Pushing limits" control.
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Background
+                if (getModel().isRollover())
+                    g2.setColor(CLR_BTN_HOVER);
+                else
+                    g2.setColor(CLR_BTN);
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                // Border
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
+                // Text
+                g2.setColor(CLR_TEXT);
+                g2.setFont(getFont());
+                FontMetrics fm = g2.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                int y = (getHeight() + fm.getAscent()) / 2 - 4;
+                g2.drawString(getText(), x, y);
+
                 g2.dispose();
             }
         };
@@ -131,6 +183,7 @@ public class TicTacToe extends Game implements Serializable {
         btn.setBackground(CLR_BTN);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
+        btn.setBorder(null);
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(250, 50));
@@ -191,7 +244,7 @@ public class TicTacToe extends Game implements Serializable {
         frame.getContentPane().setBackground(CLR_BG);
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                if (onlineTimer != null)
+                if (onlineTimer != null && onlineTimer.isRunning())
                     onlineTimer.stop();
             }
         });
@@ -309,6 +362,10 @@ public class TicTacToe extends Game implements Serializable {
     }
 
     private void showMatchEndDialog(String winnerMsg) {
+        if (onlineTimer != null && onlineTimer.isRunning()) {
+            onlineTimer.stop();
+        }
+
         JDialog d = new JDialog(frame, "Game Over", true);
         d.setUndecorated(true);
         d.setSize(400, 250);
@@ -361,7 +418,8 @@ public class TicTacToe extends Game implements Serializable {
                 } else {
                     Database.Delete_Online_Game(Database.TicTacToefldr, filename, current);
                 }
-                if (onlineTimer != null)
+                // Double check timer stop here as well
+                if (onlineTimer != null && onlineTimer.isRunning())
                     onlineTimer.stop();
             }
             showMainMenu();
@@ -453,7 +511,7 @@ public class TicTacToe extends Game implements Serializable {
         @Override
         public Component getListCellRendererComponent(JList<? extends String> list, String value, int index,
                 boolean isSelected, boolean cellHasFocus) {
-            nameLbl.setText(value);
+            nameLbl.setText(Main.Get_Fullname(value));
             boolean isOnline = Database.Check_Online(value);
             statusLbl.setForeground(isOnline ? Color.GREEN : Color.RED);
 
