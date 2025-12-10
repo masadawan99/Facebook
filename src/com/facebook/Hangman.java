@@ -69,6 +69,7 @@ public class Hangman extends Game implements Serializable {
         if (frame != null)
             frame.dispose();
         frame = new JFrame(title);
+        frame.setUndecorated(true); // Minimalistic
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(1000, 800); // Larger for airy feel
         frame.setLocationRelativeTo(null);

@@ -27,6 +27,7 @@ class GameFrame extends JFrame {
 
     GameFrame() {
         this.setTitle("Snake Game - Premium");
+        this.setUndecorated(true); // Minimalistic
         panel = new GamePanel(this);
         this.setContentPane(panel);
         this.setResizable(false);
@@ -651,8 +652,8 @@ class GamePanel extends JPanel implements ActionListener {
                     s = (int) in.readObject();
                 } catch (Exception e) {
                 }
+                model.addElement(new Info(Main.Get_Fullname(f), s));
             }
-            model.addElement(new Info(Main.Get_Fullname(f), s));
         }
 
         // Sort
