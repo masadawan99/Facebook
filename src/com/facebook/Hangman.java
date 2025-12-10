@@ -44,6 +44,7 @@ public class Hangman extends Game implements Serializable {
     private final Color CLR_TEXT = Color.decode("#E0E0E0");
     private final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 48);
     private final Font FONT_BTN = new Font("Segoe UI", Font.BOLD, 14);
+    private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 24);
 
     // Word Lists
     private final String[] EASY_WORDS = { "JAVA", "CODE", "GAME", "BYTE", "LOOP", "BUG", "WEB", "APP", "GUI", "KEY" };
@@ -231,13 +232,23 @@ public class Hangman extends Game implements Serializable {
         }
         main.add(keyboardPanel, BorderLayout.SOUTH);
 
-        // Menu Button
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        top.setOpaque(false);
+        // Turn Label
+        JLabel turnLabel = new JLabel(title, SwingConstants.CENTER); // Reuse title for now, logic below
+        turnLabel.setFont(FONT_HEADER);
+        turnLabel.setForeground(CLR_ACCENT);
+        main.add(turnLabel, BorderLayout.NORTH);
+
+        // Menu Button (Revised Position or just add to North Panel)
+        JPanel topObj = new JPanel(new BorderLayout());
+        topObj.setBackground(CLR_BG);
+        topObj.add(turnLabel, BorderLayout.CENTER);
+
+        JPanel menuP = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        menuP.setOpaque(false);
         JButton btnMenu = new JButton("MENU");
         btnMenu.setFont(FONT_BTN);
         btnMenu.setBackground(CLR_BG);
-        btnMenu.setForeground(Color.GRAY); // Discreet
+        btnMenu.setForeground(Color.GRAY);
         btnMenu.setBorder(null);
         btnMenu.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnMenu.addActionListener(e -> {
@@ -245,10 +256,32 @@ public class Hangman extends Game implements Serializable {
                 onlineTimer.stop();
             showMainMenu();
         });
-        top.add(btnMenu);
-        main.add(top, BorderLayout.NORTH);
+        menuP.add(btnMenu);
+        topObj.add(menuP, BorderLayout.EAST);
+
+        main.add(topObj, BorderLayout.NORTH);
 
         frame.add(main);
+
+        // Keyboard Support
+        main.setFocusable(true);
+        main.requestFocusInWindow();
+        main.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                char c = Character.toUpperCase(e.getKeyChar());
+                if (c >= 'A' && c <= 'Z') {
+                    int idx = c - 'A';
+                    if (idx >= 0 && idx < 26) {
+                        JButton btn = keyButtons[idx];
+                        if (btn.isEnabled()) {
+                            btn.doClick(); // Simulates click, handles logic + online checks automatically
+                        }
+                    }
+                }
+            }
+        });
+
         frame.revalidate();
         frame.repaint();
     }
@@ -707,8 +740,8 @@ public class Hangman extends Game implements Serializable {
         main.setBackground(CLR_BG);
         main.setBorder(new LineBorder(CLR_ACCENT, 2));
 
-        JLabel head = new JLabel("FRIEND WINS (VS CPU)", SwingConstants.CENTER);
-        head.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        JLabel head = new JLabel("PVP STREAKS", SwingConstants.CENTER);
+        head.setFont(FONT_HEADER);
         head.setForeground(CLR_ACCENT);
         head.setBorder(new EmptyBorder(20, 0, 20, 0));
         main.add(head, BorderLayout.NORTH);
@@ -716,30 +749,11 @@ public class Hangman extends Game implements Serializable {
         DefaultListModel<Info> model = new DefaultListModel<>();
 
         String curr = Main.current.getCredentials().getUsername();
-        int myScore = 0;
-        try {
-            File f = new File(Database.HangManfldr, curr + "/HighScore");
-            if (f.exists()) {
-                ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
-                myScore = (int) in.readObject();
-                in.close();
-            }
-        } catch (Exception e) {
-        }
-        model.addElement(new Info(curr + " (You)", myScore));
 
+        // Load Friends and their streaks
         ArrayList<String> friends = Database.Load_Friends(curr);
         for (String f : friends) {
-            int s = 0;
-            try {
-                File file = new File(Database.HangManfldr, f + "/HighScore");
-                if (file.exists()) {
-                    ObjectInputStream in = new ObjectInputStream(new FileInputStream(file));
-                    s = (int) in.readObject();
-                    in.close();
-                }
-            } catch (Exception e) {
-            }
+            int s = Database.Load_Streak(f);
             model.addElement(new Info(f, s));
         }
 
@@ -763,7 +777,7 @@ public class Hangman extends Game implements Serializable {
                 JLabel n = new JLabel((index + 1) + ". " + value.name);
                 n.setFont(new Font("Segoe UI", Font.PLAIN, 16));
                 n.setForeground(CLR_TEXT);
-                JLabel s = new JLabel(String.valueOf(value.score));
+                JLabel s = new JLabel("Streak: " + value.score);
                 s.setFont(new Font("Segoe UI", Font.BOLD, 16));
                 s.setForeground(Color.ORANGE);
                 p.add(n, BorderLayout.WEST);
@@ -1079,7 +1093,8 @@ public class Hangman extends Game implements Serializable {
             // players[0] = curr; players[1] = f; (at invite time)
             // But we must respect that order.
 
-            String title = "Hangman Online - " + (amIGuesser ? "GUESSING" : "SPECTATING");
+            String guesserName = players[1];
+            String title = "Turn: " + guesserName + (amIGuesser ? " (YOU)" : "");
             if (frame == null) {
                 setupFrame(title);
             }
@@ -1200,15 +1215,19 @@ public class Hangman extends Game implements Serializable {
         String msg;
         boolean win;
         String me = Main.current.getCredentials().getUsername();
+        boolean iWon = false;
+
         if (winner.equals(me)) {
             msg = "YOU WON!";
             win = true;
+            iWon = true;
         } else if (winner.equals("Setter")) {
             // If I am setter, I won.
             // Who is setter? players[0]
             if (players[0].equals(me)) {
                 msg = "YOU WON! (Guesser Failed)";
                 win = true;
+                iWon = true;
             } else {
                 msg = "GAME OVER!";
                 win = false;
@@ -1216,6 +1235,17 @@ public class Hangman extends Game implements Serializable {
         } else {
             msg = "GAME OVER!";
             win = false;
+        }
+
+        // Update Streak
+        String opponent = (players[0] != null && players[0].equals(me)) ? players[1] : players[0];
+        if (opponent != null) {
+            if (iWon) {
+                int s = Database.Load_Streak(opponent);
+                Database.Write_Streak(opponent, s + 1);
+            } else {
+                Database.Write_Streak(opponent, 0); // Reset on loss
+            }
         }
 
         // Remove Game Files
