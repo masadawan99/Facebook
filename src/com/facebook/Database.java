@@ -287,7 +287,7 @@ public class Database {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             return (String[]) in.readObject();
         } catch (Exception s) {
-            System.out.println("error reading file");
+            // Suppress error (common for first load)
         }
         return null;
     }
