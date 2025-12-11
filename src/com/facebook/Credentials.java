@@ -1,4 +1,5 @@
 package com.facebook;
+
 import java.io.Serializable;
 
 public class Credentials implements Serializable {
@@ -6,7 +7,7 @@ public class Credentials implements Serializable {
     private String username;
     private String password;
 
-    Credentials(String username, String password) {
+    public Credentials(String username, String password) {
         this.username = username;
         this.password = password;
     }
@@ -19,7 +20,7 @@ public class Credentials implements Serializable {
         this.password = password;
     }
 
-    boolean p_Verify(String password){
+    public boolean p_Verify(String password) {
         return password.equals(this.password);
     }
 

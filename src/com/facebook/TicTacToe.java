@@ -741,7 +741,7 @@ public class TicTacToe extends Game implements Serializable {
             Database.Write_Score_board(Database.TicTacToefldr, filename, new Scoreboard());
             Database.Write_Notification(f, new Notification(Notification.Type.GAME,
                     (Main.current.getFullName()) + " Invited you to play TIC TAC TOE"));
-            Database.Write_Game_Invite(f, new Game_Invite(new TicTacToe(), filename, curr));
+            Database.Write_Game_Invite(f, new Game_Invite("TicTacToe", filename, curr));
             Online_game_launch(filename);
         };
 

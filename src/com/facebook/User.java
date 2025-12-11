@@ -1,4 +1,5 @@
 package com.facebook;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -12,9 +13,12 @@ public class User implements Serializable {
     private String bio;
     private Credentials credentials;
     private boolean Privacy;
+    private Gender gender;
 
-    public User(String firstname, String lastname, LocalDate birth, String bio, Credentials credentials) {
+    public User(String firstname, String lastname, LocalDate birth, String bio, Credentials credentials,
+            Gender gender) {
         Firstname = firstname;
+        this.gender = gender;
         Lastname = lastname;
         this.birth = birth;
         this.bio = bio;
@@ -22,19 +26,20 @@ public class User implements Serializable {
         Privacy = false;
     }
 
-    public void Print_profile(){
+    public void Print_profile() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         String format = birth.format(formatter);
-        System.out.println(Firstname+" "+ Lastname);
-        System.out.println("Date of Birth: "+format);
-        System.out.println("BIO: "+bio);
-        if(!Privacy){
-            System.out.println(Database.Check_Online(credentials.getUsername())? "Online 🟢": "Offline 🔴");
+        System.out.println(Firstname + " " + Lastname);
+        System.out.println("Gender: " + gender);
+        System.out.println("Date of Birth: " + format);
+        System.out.println("BIO: " + bio);
+        if (!Privacy) {
+            System.out.println(Database.Check_Online(credentials.getUsername()) ? "Online 🟢" : "Offline 🔴");
         }
     }
 
-    public String getFullName(){
-        return Firstname+" "+Lastname;
+    public String getFullName() {
+        return Firstname + " " + Lastname;
     }
 
     public String getFirstname() {
@@ -73,12 +78,12 @@ public class User implements Serializable {
         return credentials;
     }
 
-    public void Privacy_Mode_On(){
+    public void Privacy_Mode_On() {
         Privacy = true;
         System.out.println("Privacy Mode Turned ON Successfully!");
     }
 
-    public void Privacy_Mode_OFF(){
+    public void Privacy_Mode_OFF() {
         Privacy = false;
         System.out.println("Privacy Mode Turned OFF Successfully!");
     }

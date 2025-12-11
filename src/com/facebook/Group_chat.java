@@ -1,4 +1,5 @@
 package com.facebook;
+
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,13 +12,13 @@ public class Group_chat extends Chat implements Serializable {
     private ArrayList<String> members;
     private String creator;
 
-    Group_chat(String groupname, String groupdescription, ArrayList<String> members){
+    public Group_chat(String groupname, String groupdescription, ArrayList<String> members) {
         this.creator = Main.current.getCredentials().getUsername();
         this.groupname = groupname;
         this.groupdescription = groupdescription;
         this.members = new ArrayList<>(members);
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        filepathinitilize(groupname+creator+timestamp);
+        filepathinitilize(groupname + creator + timestamp);
     }
 
     public ArrayList<String> getMembers() {
@@ -67,14 +68,17 @@ public class Group_chat extends Chat implements Serializable {
     }
 
     @Override
-    public void Print_Chat_Outside(){
+    public void Print_Chat_Outside() {
         System.out.println(groupname);
     }
 
     @Override
-    public void filepathinitilize(String path){
+    public void filepathinitilize(String path) {
         setFolder_path(path);
     }
 
+    public String getGroupName() {
+        return groupname;
+    }
 
 }

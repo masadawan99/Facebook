@@ -1,4 +1,5 @@
 package com.facebook;
+
 import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -9,7 +10,7 @@ public class Post extends Content implements Serializable {
     private ArrayList<String> tagged;
 
     public Post(String text, String sender) {
-       super(text,sender);
+        super(text, sender);
     }
 
     @Override
@@ -31,5 +32,9 @@ public class Post extends Content implements Serializable {
 
     public void setTagged(ArrayList<String> tagged) {
         this.tagged = tagged;
+    }
+
+    public String getContent() {
+        return getText();
     }
 }

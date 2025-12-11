@@ -1161,9 +1161,11 @@ public class Page {
                     } else {
                         Game_Invite invite = invites.get(--index);
                         Database.Delete_Game_invite(invite);
-                        if (invite.getGame() instanceof TicTacToe toe) {
+                        if (invite.getGame().equals("TicTacToe")) {
+                            TicTacToe toe = new TicTacToe();
                             toe.Online_game_launch(invite.getFilepath());
-                        } else if (invite.getGame() instanceof Hangman hangman) {
+                        } else if (invite.getGame().equals("Hangman")) {
+                            Hangman hangman = new Hangman();
                             hangman.Online_game_launch(invite.getFilepath());
                         }
                     }

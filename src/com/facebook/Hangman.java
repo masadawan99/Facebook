@@ -1059,7 +1059,7 @@ public class Hangman extends Game implements Serializable {
         Database.Write_players(Database.HangManfldr, filename, players);
 
         // Send Invite
-        Database.Write_Game_Invite(opponent, new Game_Invite(new Hangman(), filename, curr));
+        Database.Write_Game_Invite(opponent, new Game_Invite("Hangman", filename, curr));
 
         Online_game_launch(filename);
     }

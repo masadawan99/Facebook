@@ -1,23 +1,24 @@
 package com.facebook;
+
 import java.io.Serializable;
 
 public class DM_chat extends Chat implements Serializable {
     private static final long serialVersionUID = 1L;
     private String R_username;
 
-    DM_chat(String  sender, String reciever){
+    public DM_chat(String sender, String reciever) {
         this.R_username = reciever;
         filepathinitilize(sender);
     }
 
-    public void Print_Chat_Outside(){
+    public void Print_Chat_Outside() {
         User temp = Database.LoadUser(R_username);
-        System.out.println(temp.getFirstname()+" "+temp.getLastname());
+        System.out.println(temp.getFirstname() + " " + temp.getLastname());
     }
 
     @Override
-    public void filepathinitilize(String sender){
-       setFolder_path(Database.Alphabetizefilename(sender, R_username));
+    public void filepathinitilize(String sender) {
+        setFolder_path(Database.Alphabetizefilename(sender, R_username));
     }
 
     public String getR_username() {
