@@ -10,11 +10,11 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 
 public class TicTacToe extends Game implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
-    // Game Logic Variables
-    private String cross = "X"; // Logic identifier
-    private String tick = "O"; // Logic identifier
+    private String cross = "X";
+    private String tick = "O";
     private String turn;
     private String mark;
     private String[] board = new String[9];
@@ -22,26 +22,24 @@ public class TicTacToe extends Game implements Serializable {
     private String[] players = new String[2];
     private String[] marks = new String[2];
     private boolean isVsComputer = true;
+    private boolean isOnline = false;
+    private JButton btnExit;
 
-    // GUI Components
     private transient JFrame frame;
-    private transient BoardButton[] boardButtons; // Custom Button Class
+    private transient BoardButton[] boardButtons;
     private transient JLabel statusLabel;
     private transient Timer onlineTimer;
 
-    // Premium Palette
     private final Color CLR_BG = Color.decode("#121212");
     private final Color CLR_PANEL = Color.decode("#1E1E1E");
     private final Color CLR_BTN = Color.decode("#252525");
     private final Color CLR_BTN_HOVER = Color.decode("#303030");
-    private final Color CLR_ACCENT_X = Color.decode("#FF4500"); // OrangeRed
-    private final Color CLR_ACCENT_O = Color.decode("#FFA500"); // Orange
+    private final Color CLR_ACCENT_X = Color.decode("#FF4500");
+    private final Color CLR_ACCENT_O = Color.decode("#FFA500");
     private final Color CLR_TEXT = Color.decode("#E0E0E0");
 
-    // Fonts
     private final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 40);
     private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 22);
-    // FONT_BTN removed as we draw manually
     private final Font FONT_UI = new Font("Segoe UI", Font.PLAIN, 16);
 
     public TicTacToe() {
@@ -53,23 +51,55 @@ public class TicTacToe extends Game implements Serializable {
         SwingUtilities.invokeLater(this::showMainMenu);
     }
 
-    // ==========================================
-    // Custom Rendering Button (The Fix)
-    // ==========================================
+    public State Game_mechanic(String turn) {
+        if ((board[0].equals(turn) && board[0].equals(board[1]) && board[1].equals(board[2]))
+                || (board[3].equals(turn) && board[3].equals(board[4]) && board[4].equals(board[5]))
+                || (board[6].equals(turn) && board[6].equals(board[7]) && board[7].equals(board[8]))) {
+            return State.WIN;
+        }
+        if ((board[0].equals(turn) && board[0].equals(board[3]) && board[3].equals(board[6]))
+                || (board[1].equals(turn) && board[1].equals(board[4]) && board[4].equals(board[7]))
+                || (board[2].equals(turn) && board[2].equals(board[5]) && board[5].equals(board[8]))) {
+            return State.WIN;
+        }
+        if ((board[0].equals(turn) && board[0].equals(board[4]) && board[4].equals(board[8]))
+                || (board[2].equals(turn) && board[2].equals(board[4]) && board[4].equals(board[6]))) {
+            return State.WIN;
+        }
+        for (int i = 0; i < board.length; i++) {
+            if (board[i].equals(" "))
+                return State.CONTINUE;
+        }
+        return State.DRAW;
+    }
+
+    public boolean Place_marker(int index, String turn) {
+        if (board[index].equals(" ")) {
+            board[index] = turn;
+            return true;
+        }
+        return false;
+    }
+
+    public void board_cleaner() {
+        for (int i = 0; i < board.length; i++)
+            board[i] = " ";
+    }
+
     private class BoardButton extends JButton {
-        private String symbol = " "; // "X", "O", or " "
-        private float animScale = 0f; // 0 to 1 for animation
+        private String symbol = " ";
+        private float animScale = 0f;
 
         public BoardButton() {
             setFocusPainted(false);
             setBackground(CLR_PANEL);
-            setBorder(null); // No border
+            setBorder(null);
             setContentAreaFilled(false);
         }
 
         public void setSymbol(String s) {
             this.symbol = s;
-            this.animScale = 1f; // Default full scale if set directly
+            this.animScale = 1f;
             repaint();
         }
 
@@ -80,20 +110,18 @@ public class TicTacToe extends Game implements Serializable {
 
         @Override
         protected void paintComponent(Graphics g) {
-            // Background
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(getBackground());
             g2.fillRect(0, 0, getWidth(), getHeight());
 
-            // Symbol Rendering
             if (!symbol.equals(" ")) {
                 int w = getWidth();
                 int h = getHeight();
-                int size = (int) (Math.min(w, h) * 0.6 * animScale); // Scale affects size
+                int size = (int) (Math.min(w, h) * 0.6 * animScale);
                 int x = (w - size) / 2;
                 int y = (h - size) / 2;
-                int stroke = 8; // Thicker lines
+                int stroke = 8;
 
                 g2.setStroke(new BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
@@ -110,9 +138,6 @@ public class TicTacToe extends Game implements Serializable {
         }
     }
 
-    // ==========================================
-    // Custom UI Components
-    // ==========================================
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text) {
             @Override
@@ -123,29 +148,12 @@ public class TicTacToe extends Game implements Serializable {
 
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
-
-                // Thick Border
                 g2.setColor(CLR_TEXT);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
-
-                super.paintComponent(g2); // Draws text? No, super ignores custom text pos usually if setUI not used,
-                                          // but let's stick to consistent manual draw if needed.
-                // Wait, logic in TicTacToe relied on super.paintComponent?
-                // Checking previous code: "super.paintComponent(g2);" was calling JButton's
-                // paint but with g2 context?
-                // Actually previous code did `super.paintComponent(g2)` after filling
-                // background.
-                // JButton's paintComponent paints text/icon.
-                // If I want thick border ON TOP, I should draw it after super.
-                // But wait, I set contentAreaFilled false.
-
+                super.paintComponent(g2);
                 g2.dispose();
 
-                // Re-do to ensure text is visible and on top or handle manual text drawing like
-                // Hangman for consistency?
-                // The previous code used super.paintComponent(g2).
-                // Let's replicate manual text drawing for "Pushing limits" control.
             }
 
             @Override
@@ -153,22 +161,26 @@ public class TicTacToe extends Game implements Serializable {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Background
-                if (getModel().isRollover())
-                    g2.setColor(CLR_BTN_HOVER);
-                else
-                    g2.setColor(CLR_BTN);
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.RED);
+                } else {
+                    g2.setColor(CLR_BG);
+                }
 
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
 
                 // Border
-                g2.setColor(CLR_TEXT);
+                g2.setColor(CLR_ACCENT_X);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
 
                 // Text
-                g2.setColor(CLR_TEXT);
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.BLACK);
+                } else {
+                    g2.setColor(Color.LIGHT_GRAY);
+                }
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
                 int x = (getWidth() - fm.stringWidth(getText())) / 2;
@@ -203,6 +215,17 @@ public class TicTacToe extends Game implements Serializable {
         return btn;
     }
 
+    private JLabel p1StatusLbl;
+    private JLabel p2StatusLbl;
+
+    private void cleanupOnlineGame() {
+        if (filename == null || players == null || players.length < 2)
+            return;
+        String current = Main.current.getCredentials().getUsername();
+        // Only delete the online presence marker, keeping the game history/scoreboard
+        Database.Delete_Online_Game(Database.TicTacToefldr, filename, current);
+    }
+
     private void styleScrollBar(JScrollPane scrollPane) {
         scrollPane.getVerticalScrollBar().setUI(new BasicScrollBarUI() {
             @Override
@@ -230,21 +253,23 @@ public class TicTacToe extends Game implements Serializable {
         scrollPane.setBorder(null);
     }
 
-    // ==========================================
-    // Views
-    // ==========================================
     private void setupFrame(String title) {
         if (frame != null)
             frame.dispose();
         frame = new JFrame(title);
-        frame.setUndecorated(true); // Minimalistic
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(500, 650);
+        frame.setUndecorated(true);
+        frame.setSize(500, 600);
+        // frame.setIconImage(new ImageIcon(Main.favicon).getImage()); // Removed:
+        // favicon not existing
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.getContentPane().setBackground(CLR_BG);
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
+                if (frame.getTitle().contains("Online")) {
+                    cleanupOnlineGame();
+                }
                 if (onlineTimer != null && onlineTimer.isRunning())
                     onlineTimer.stop();
             }
@@ -268,8 +293,7 @@ public class TicTacToe extends Game implements Serializable {
 
         addButtonToMenu(content, "OFFLINE MODE", e -> showOfflineSelectionDialog());
         addButtonToMenu(content, "ONLINE MODE", e -> startOnlineSetup());
-        addButtonToMenu(content, "SCOREBOARD",
-                e -> showCustomDialog("Feature unavailable without database context", "Info"));
+
         addButtonToMenu(content, "EXIT", e -> frame.dispose());
 
         frame.add(content);
@@ -283,18 +307,13 @@ public class TicTacToe extends Game implements Serializable {
         panel.add(Box.createVerticalStrut(20));
     }
 
-    // ==========================================
-    // Custom Dialogs "Pushing Limits"
-    // ==========================================
     private void showCustomDialog(String message, String titleStr) {
         JDialog d = new JDialog(frame, titleStr, true);
         d.setUndecorated(true);
         d.setSize(400, 200);
         d.setLocationRelativeTo(frame);
 
-        JPanel p = new JPanel((LayoutManager) null); // Using null layout for absolute positioning or just use
-                                                     // BorderLayout
-        p = new JPanel(new BorderLayout());
+        JPanel p = new JPanel(new BorderLayout());
         p.setBackground(CLR_PANEL);
         p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT_X, 2));
 
@@ -319,12 +338,16 @@ public class TicTacToe extends Game implements Serializable {
         JDialog d = new JDialog(frame, "Select Mode", true);
         d.setUndecorated(true);
         d.setSize(400, 300);
-        d.setLocationRelativeTo(frame);
+
+        int x = frame.getX() + (frame.getWidth() - d.getWidth()) / 2;
+        int y = frame.getY() + (frame.getHeight() - d.getHeight()) / 2 - 50;
+        d.setLocation(x, y);
 
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(CLR_PANEL);
-        p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT_X, 2));
+        p.setBackground(CLR_BG);
+
+        p.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
 
         JLabel lbl = new JLabel("SELECT OPPONENT");
         lbl.setFont(FONT_HEADER);
@@ -402,27 +425,30 @@ public class TicTacToe extends Game implements Serializable {
                     Database.Delete_END(Database.TicTacToefldr, filename, "END");
                 } else {
                     Database.Delete_END(Database.TicTacToefldr, filename, "END" + current);
+                    Database.Delete_END(Database.TicTacToefldr, filename, "END");
                 }
+
+                // Reset board for new game
+                board_cleaner();
+                Database.Write_board(filename, board);
+
                 Online_game_launch(filename);
             } else {
-                showOfflineSelectionDialog();
+                if (isVsComputer) {
+                    setupOfflineGame("You vs Computer");
+                } else {
+                    setupOfflineGame("Player 1 vs Player 2");
+                }
             }
         });
 
         btnMenu.addActionListener(e -> {
             d.dispose();
             if (frame.getTitle().contains("Online")) {
-                String current = Main.current.getCredentials().getUsername();
-                String f = players[0].equals(current) ? players[1] : players[0];
-                if (!Database.Check_Online_Game(Database.TicTacToefldr, filename, f)) {
-                    Database.Delete_Game_files(Database.TicTacToefldr, filename);
-                } else {
-                    Database.Delete_Online_Game(Database.TicTacToefldr, filename, current);
-                }
-                // Double check timer stop here as well
-                if (onlineTimer != null && onlineTimer.isRunning())
-                    onlineTimer.stop();
+                cleanupOnlineGame();
             }
+            if (onlineTimer != null && onlineTimer.isRunning())
+                onlineTimer.stop();
             showMainMenu();
         });
 
@@ -435,9 +461,6 @@ public class TicTacToe extends Game implements Serializable {
         d.setVisible(true);
     }
 
-    // ==========================================
-    // Friend List (Slick & Minimal)
-    // ==========================================
     private void startOnlineSetup() {
         frame.getContentPane().removeAll();
         JPanel content = new JPanel(new BorderLayout());
@@ -468,7 +491,7 @@ public class TicTacToe extends Game implements Serializable {
         footer.setBackground(CLR_BG);
         footer.setBorder(new EmptyBorder(20, 0, 20, 0));
 
-        JButton btnInvite = createStyledButton("INVITE SELECTED");
+        JButton btnInvite = createStyledButton("SEND INVITE");
         JButton btnBack = createStyledButton("BACK");
         btnBack.setPreferredSize(new Dimension(100, 50));
 
@@ -527,9 +550,6 @@ public class TicTacToe extends Game implements Serializable {
         }
     }
 
-    // ==========================================
-    // Game Logic Integration
-    // ==========================================
     private void setupOfflineGame(String title) {
         players[0] = cross;
         players[1] = tick;
@@ -546,13 +566,59 @@ public class TicTacToe extends Game implements Serializable {
         main.setBackground(CLR_BG);
         main.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Header
-        statusLabel = new JLabel("TURN: " + turn.toUpperCase(), SwingConstants.CENTER);
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(CLR_BG);
+
+        String labelText;
+        if (isOnline) {
+            labelText = "TURN: " + turn.toUpperCase();
+
+            // Player 1 Status Panel (Left)
+            JPanel p1Panel = new JPanel();
+            p1Panel.setBackground(CLR_BG);
+            p1Panel.setLayout(new BoxLayout(p1Panel, BoxLayout.Y_AXIS));
+
+            JLabel p1Name = new JLabel(Main.Get_Fullname(players[0]));
+            p1Name.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            p1Name.setForeground(CLR_TEXT);
+            p1StatusLbl = new JLabel("Offline");
+            p1StatusLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            p1StatusLbl.setForeground(Color.RED);
+
+            p1Panel.add(p1Name);
+            p1Panel.add(p1StatusLbl);
+            headerPanel.add(p1Panel, BorderLayout.WEST);
+
+            // Player 2 Status Panel (Right)
+            JPanel p2Panel = new JPanel();
+            p2Panel.setBackground(CLR_BG);
+            p2Panel.setLayout(new BoxLayout(p2Panel, BoxLayout.Y_AXIS));
+
+            JLabel p2Name = new JLabel(Main.Get_Fullname(players[1]));
+            p2Name.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            p2Name.setForeground(CLR_TEXT);
+            p2StatusLbl = new JLabel("Offline");
+            p2StatusLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            p2StatusLbl.setForeground(Color.RED);
+
+            p2Panel.add(p2Name);
+            p2Panel.add(p2StatusLbl);
+            headerPanel.add(p2Panel, BorderLayout.EAST);
+
+        } else {
+            if (isVsComputer) {
+                labelText = turn.equals(players[1]) ? "TURN: COMPUTER" : "TURN: YOUR'S";
+            } else {
+                labelText = "TURN: " + (turn.equals(players[0]) ? "PLAYER 1" : "PLAYER 2");
+            }
+        }
+        statusLabel = new JLabel(labelText, SwingConstants.CENTER);
         statusLabel.setFont(FONT_HEADER);
         statusLabel.setForeground(CLR_ACCENT_X);
-        main.add(statusLabel, BorderLayout.NORTH);
+        headerPanel.add(statusLabel, BorderLayout.CENTER);
 
-        // Grid with padding
+        main.add(headerPanel, BorderLayout.NORTH);
+
         JPanel gridContainer = new JPanel(new GridBagLayout());
         gridContainer.setBackground(CLR_BG);
         JPanel grid = new JPanel(new GridLayout(3, 3, 15, 15));
@@ -575,35 +641,60 @@ public class TicTacToe extends Game implements Serializable {
         gridContainer.add(grid);
         main.add(gridContainer, BorderLayout.CENTER);
 
-        // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER));
         footer.setBackground(CLR_BG);
         JButton btnResign = createStyledButton("RESIGN");
-        btnResign.setPreferredSize(new Dimension(150, 45));
+        btnResign.setPreferredSize(new Dimension(120, 45));
         btnResign.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
         btnResign.addActionListener(e -> {
             if (isOnline) {
-                Database.Write_END(Database.TicTacToefldr, filename,
-                        players[0].equals(Main.current.getCredentials().getUsername()) ? players[1] : players[0],
-                        "END");
+                String current = Main.current.getCredentials().getUsername();
+                String opponent = players[0].equals(current) ? players[1] : players[0];
+
+                // Forfeit logic: Update scoreboard
+                Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
+                if (sb != null) {
+                    if (opponent.equals(players[0]))
+                        sb.increment_Score1();
+                    else
+                        sb.increment_Score2();
+                    Database.Write_Score_board(Database.TicTacToefldr, filename, sb);
+                }
+
+                Database.Write_END(Database.TicTacToefldr, filename, opponent, "END");
+                Database.Write_END(Database.TicTacToefldr, filename, opponent, "END" + opponent);
             } else {
                 showMatchEndDialog(turn.equals(players[0]) ? "Player 2 Won!" : "Player 1 Won!");
             }
         });
 
-        JButton btnMenu = createStyledButton("MENU");
-        btnMenu.setPreferredSize(new Dimension(150, 45));
-        btnMenu.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnMenu.addActionListener(e -> {
-            if (isOnline && onlineTimer != null)
-                onlineTimer.stop();
-            showMainMenu();
-        });
-
         footer.add(btnResign);
-        footer.add(Box.createHorizontalStrut(20));
-        footer.add(btnMenu);
+
+        if (isOnline) {
+            JButton btnScore = createStyledButton("SCOREBOARD");
+            btnScore.setPreferredSize(new Dimension(120, 45));
+            btnScore.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnScore.addActionListener(e -> showInGameScoreboard());
+            footer.add(Box.createHorizontalStrut(20));
+            footer.add(Box.createHorizontalStrut(20));
+            footer.add(btnScore);
+
+            // Exit Button (Right of Scoreboard)
+            btnExit = createStyledButton("EXIT");
+            btnExit.setPreferredSize(new Dimension(90, 45));
+            btnExit.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnExit.setEnabled(false); // Disabled by default
+            btnExit.addActionListener(e -> {
+                if (onlineTimer != null)
+                    onlineTimer.stop();
+                frame.dispose();
+                showMainMenu();
+            });
+            footer.add(Box.createHorizontalStrut(20));
+            footer.add(btnExit);
+
+        }
         main.add(footer, BorderLayout.SOUTH);
 
         frame.add(main);
@@ -611,7 +702,6 @@ public class TicTacToe extends Game implements Serializable {
         frame.repaint();
     }
 
-    // ... Logic ...
     private void handleOfflineClick(int index) {
         if (isVsComputer && !turn.equals(players[0]))
             return;
@@ -628,8 +718,12 @@ public class TicTacToe extends Game implements Serializable {
                 highlightWin(turn);
                 Timer t = new Timer(1000, e -> {
                     ((Timer) e.getSource()).stop();
-                    String winner = isVsComputer && turn.equals(players[1]) ? "Computer"
-                            : (turn.equals(players[0]) ? "Player 1" : "Player 2");
+                    String winner;
+                    if (isVsComputer) {
+                        winner = turn.equals(players[1]) ? "Computer" : "You";
+                    } else {
+                        winner = turn.equals(players[0]) ? "Player 1" : "Player 2";
+                    }
                     showMatchEndDialog(winner + " Won!");
                 });
                 t.start();
@@ -681,7 +775,7 @@ public class TicTacToe extends Game implements Serializable {
                 showMatchEndDialog("Game Draw!");
             } else {
                 turn = players[0];
-                updateStatusLabel("TURN: PLAYER 1");
+                updateStatusLabel("TURN: YOUR'S");
             }
         }
     }
@@ -700,25 +794,28 @@ public class TicTacToe extends Game implements Serializable {
         return -1;
     }
 
-    // Online integration helpers
     private void selectOnlineMarker(String curr, String f) {
         JDialog d = new JDialog(frame, "Marker", true);
         d.setUndecorated(true);
-        d.setSize(400, 200);
-        d.setLocationRelativeTo(frame);
+        d.setSize(400, 300);
+
+        int x = frame.getX() + (frame.getWidth() - d.getWidth()) / 2;
+        int y = frame.getY() + (frame.getHeight() - d.getHeight()) / 2 - 50;
+        d.setLocation(x, y);
 
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(CLR_PANEL);
-        p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT_X, 2));
+        p.setBackground(CLR_BG);
+        p.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
 
         JLabel l = new JLabel("CHOOSE YOUR MARKER");
         l.setFont(FONT_HEADER);
-        l.setForeground(CLR_TEXT);
+        l.setForeground(CLR_ACCENT_X);
         l.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JButton btnX = createStyledButton("CROSS (X)");
         JButton btnO = createStyledButton("TICK (O)");
+        JButton btnBack = createStyledButton("BACK");
 
         ActionListener al = e -> {
             d.dispose();
@@ -736,9 +833,21 @@ public class TicTacToe extends Game implements Serializable {
             players[0] = curr;
             players[1] = f;
             filename = Database.Alphabetizefilename(curr, f);
-            Database.Create_GameFiles(Database.TicTacToefldr, filename);
+
+            Scoreboard existingScoreboard = Database.Load_Score_board(Database.TicTacToefldr, filename);
+            if (existingScoreboard == null) {
+                Database.Create_GameFiles(Database.TicTacToefldr, filename);
+                Database.Write_Score_board(Database.TicTacToefldr, filename, new Scoreboard());
+            }
+
+            // Fix: Clear any stale END files to prevent immediate game over
+            Database.Delete_END(Database.TicTacToefldr, filename, "END");
+            Database.Delete_END(Database.TicTacToefldr, filename, "END" + curr);
+            Database.Delete_END(Database.TicTacToefldr, filename, "END" + f);
+
+            board_cleaner();
             Database.Write_tic_tac(board, filename, turn, players, marks);
-            Database.Write_Score_board(Database.TicTacToefldr, filename, new Scoreboard());
+
             Database.Write_Notification(f, new Notification(Notification.Type.GAME,
                     (Main.current.getFullName()) + " Invited you to play TIC TAC TOE"));
             Database.Write_Game_Invite(f, new Game_Invite("TicTacToe", filename, curr));
@@ -747,6 +856,10 @@ public class TicTacToe extends Game implements Serializable {
 
         btnX.addActionListener(al);
         btnO.addActionListener(al);
+        btnBack.addActionListener(e -> {
+            d.dispose();
+            startOnlineSetup(); // Return to friend selection
+        });
 
         p.add(Box.createVerticalStrut(30));
         p.add(l);
@@ -754,6 +867,9 @@ public class TicTacToe extends Game implements Serializable {
         p.add(btnX);
         p.add(Box.createVerticalStrut(15));
         p.add(btnO);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnBack);
+        p.add(Box.createVerticalGlue());
 
         d.add(p);
         d.setVisible(true);
@@ -762,7 +878,6 @@ public class TicTacToe extends Game implements Serializable {
     public void Online_game_launch(String filepath) {
         filename = filepath;
 
-        // Load Players and Marks (Essential for turn logic and identity)
         String[] p = Database.Load_Players(Database.TicTacToefldr, filename);
         if (p != null)
             players = p;
@@ -783,15 +898,21 @@ public class TicTacToe extends Game implements Serializable {
             setupFrame(title);
         }
 
-        board_cleaner();
+        // Just Load Board (Joiner Logic) - Do NOT Reset
+        String[] b = Database.Load_tic_tac_board(filepath);
+        if (b != null)
+            board = b;
+        else
+            board_cleaner(); // Fallback
+
         Database.Write_Online_Game(Database.TicTacToefldr, filepath, Main.current.getCredentials().getUsername());
-        Database.Write_board(filepath, board);
         showGameBoard(title, true);
         frame.setVisible(true);
 
         if (onlineTimer != null)
             onlineTimer.stop();
-        onlineTimer = new Timer(1000, e -> onlineGameLoop());
+        // Updated to 1500 as requested
+        onlineTimer = new Timer(1500, e -> onlineGameLoop());
         onlineTimer.start();
     }
 
@@ -808,6 +929,36 @@ public class TicTacToe extends Game implements Serializable {
         board = Database.Load_tic_tac_board(filename);
         turn = Database.Load_turn(Database.TicTacToefldr, filename);
         updateBoardFromState();
+
+        // CHECK ONLINE STATUS
+        if (players != null && players.length >= 2) {
+            boolean p1Online = Database.Check_Online_Game(Database.TicTacToefldr, filename, players[0]);
+            boolean p2Online = Database.Check_Online_Game(Database.TicTacToefldr, filename, players[1]);
+
+            if (p1StatusLbl != null) {
+                p1StatusLbl.setText(p1Online ? "Online" : "Offline");
+                p1StatusLbl.setForeground(p1Online ? Color.GREEN : Color.RED);
+            }
+            if (p2StatusLbl != null) {
+                p2StatusLbl.setText(p2Online ? "Online" : "Offline");
+                p2StatusLbl.setForeground(p2Online ? Color.GREEN : Color.RED);
+            }
+
+            // Exit Button Logic: Enable only if opponent is Offline
+            if (btnExit != null) {
+                String me = Main.current.getCredentials().getUsername();
+                boolean amIP1 = me.equals(players[0]);
+                boolean opponentOnline = amIP1 ? p2Online : p1Online;
+
+                if (!opponentOnline) {
+                    btnExit.setEnabled(true);
+                    btnExit.setToolTipText("Opponent is offline. You can leave safely.");
+                } else {
+                    btnExit.setEnabled(false);
+                    btnExit.setToolTipText("Opponent is online. Use Resign to leave.");
+                }
+            }
+        }
 
         updateStatusLabel("TURN: " + Main.Get_Fullname(turn).toUpperCase());
 
@@ -827,15 +978,101 @@ public class TicTacToe extends Game implements Serializable {
         if (Place_marker(index, mark)) {
             animateMarkerParams(index, mark);
             State state = Game_mechanic(mark);
-            if (state == State.WIN)
+            if (state == State.WIN) {
+                // Update Scoreboard on WIN
+                Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
+                if (sb != null) {
+                    if (turn.equals(players[0]))
+                        sb.increment_Score1();
+                    else
+                        sb.increment_Score2();
+                    Database.Write_Score_board(Database.TicTacToefldr, filename, sb);
+                }
                 Database.Write_END(Database.TicTacToefldr, filename, turn, "END");
-            else if (state == State.DRAW)
+            } else if (state == State.DRAW) {
+                Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
+                if (sb != null) {
+                    sb.increment_Total(); // Just increment total games on draw if desired, or handled in increments
+                    // Actually Scoreboard.java increment_Total is called by increment_ScoreX, so
+                    // for draw we might just want to increment total?
+                    // Scoreboard.java: setTotolgame, getTotolgame... logic implies total = s1 + s2
+                    // usually, but actually draws count too.
+                    // Accessing sb.increment_Total() directly:
+                    sb.increment_Total();
+                    Database.Write_Score_board(Database.TicTacToefldr, filename, sb);
+                }
                 Database.Write_END(Database.TicTacToefldr, filename, null, "END");
+            }
             turn = turn.equals(players[0]) ? players[1] : players[0];
             Database.Write_board(filename, board);
             Database.Write_turn(Database.TicTacToefldr, filename, turn);
         } else
             pulseButton(boardButtons[index], Color.RED);
+    }
+
+    private void showInGameScoreboard() {
+        if (onlineTimer != null && onlineTimer.isRunning())
+            onlineTimer.stop();
+
+        JDialog d = new JDialog(frame, "Scoreboard", true);
+        d.setUndecorated(true);
+        d.setSize(400, 300);
+        d.setLocationRelativeTo(frame);
+
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBackground(CLR_BG);
+        p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT_X, 2));
+
+        JLabel title = new JLabel("SCOREBOARD");
+        title.setFont(FONT_HEADER);
+        title.setForeground(CLR_ACCENT_X);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
+        int s1 = 0, s2 = 0, total = 0;
+        if (sb != null) {
+            s1 = sb.getScore1();
+            s2 = sb.getScore2();
+            total = sb.getTotolgame();
+        }
+
+        JLabel p1Sc = new JLabel(Main.Get_Fullname(players[0]) + ": " + s1);
+        p1Sc.setFont(FONT_UI);
+        p1Sc.setForeground(CLR_TEXT);
+        p1Sc.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel p2Sc = new JLabel(Main.Get_Fullname(players[1]) + ": " + s2);
+        p2Sc.setFont(FONT_UI);
+        p2Sc.setForeground(CLR_TEXT);
+        p2Sc.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel tot = new JLabel("Total Games: " + total);
+        tot.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+        tot.setForeground(Color.GRAY);
+        tot.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JButton btnBack = createStyledButton("BACK");
+        btnBack.addActionListener(e -> {
+            d.dispose();
+            if (onlineTimer != null)
+                onlineTimer.start();
+        });
+
+        p.add(Box.createVerticalStrut(30));
+        p.add(title);
+        p.add(Box.createVerticalStrut(30));
+        p.add(p1Sc);
+        p.add(Box.createVerticalStrut(10));
+        p.add(p2Sc);
+        p.add(Box.createVerticalStrut(20));
+        p.add(tot);
+        p.add(Box.createVerticalStrut(30));
+        p.add(btnBack);
+        p.add(Box.createVerticalGlue());
+
+        d.add(p);
+        d.setVisible(true);
     }
 
     private void handleOnlineEnd(boolean END, boolean ZEEND, String current) {
@@ -891,14 +1128,29 @@ public class TicTacToe extends Game implements Serializable {
     }
 
     private void highlightWin(String winner) {
-        int[][] wins = { { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 }, { 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 }, { 0, 4, 8 },
-                { 2, 4, 6 } };
-        for (int[] w : wins) {
-            String b0 = board[w[0]];
-            if (!b0.equals(" ") && b0.equals(board[w[1]]) && b0.equals(board[w[2]]) && b0.equals(winner)) {
-                for (int idx : w)
-                    pulseButton(boardButtons[idx], Color.GREEN);
+        for (int i = 0; i < 9; i += 3) {
+            if (board[i].equals(winner) && board[i + 1].equals(winner) && board[i + 2].equals(winner)) {
+                pulseButton(boardButtons[i], Color.GREEN);
+                pulseButton(boardButtons[i + 1], Color.GREEN);
+                pulseButton(boardButtons[i + 2], Color.GREEN);
             }
+        }
+        for (int i = 0; i < 3; i++) {
+            if (board[i].equals(winner) && board[i + 3].equals(winner) && board[i + 6].equals(winner)) {
+                pulseButton(boardButtons[i], Color.GREEN);
+                pulseButton(boardButtons[i + 3], Color.GREEN);
+                pulseButton(boardButtons[i + 6], Color.GREEN);
+            }
+        }
+        if (board[0].equals(winner) && board[4].equals(winner) && board[8].equals(winner)) {
+            pulseButton(boardButtons[0], Color.GREEN);
+            pulseButton(boardButtons[4], Color.GREEN);
+            pulseButton(boardButtons[8], Color.GREEN);
+        }
+        if (board[2].equals(winner) && board[4].equals(winner) && board[6].equals(winner)) {
+            pulseButton(boardButtons[2], Color.GREEN);
+            pulseButton(boardButtons[4], Color.GREEN);
+            pulseButton(boardButtons[6], Color.GREEN);
         }
     }
 
@@ -916,41 +1168,5 @@ public class TicTacToe extends Game implements Serializable {
             }
         });
         t.start();
-    }
-
-    public void board_cleaner() {
-        for (int i = 0; i < board.length; i++)
-            board[i] = " ";
-    }
-
-    public State Game_mechanic(String turn) {
-        // ... Original simple check reused ...
-        int[][] wins = { { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 }, { 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 }, { 0, 4, 8 },
-                { 2, 4, 6 } };
-        for (int[] w : wins) {
-            if (board[w[0]].equals(turn) && board[w[1]].equals(turn) && board[w[2]].equals(turn))
-                return State.WIN;
-        }
-        for (String s : board)
-            if (s.equals(" "))
-                return State.CONTINUE;
-        return State.DRAW;
-    }
-
-    public boolean Place_marker(int index, String turn) {
-        if (board[index].equals(" ")) {
-            board[index] = turn;
-            return true;
-        }
-        return false;
-    }
-
-    public void offline_game() {
-    }
-
-    public void online() {
-    }
-
-    public void Print_board() {
     }
 }
