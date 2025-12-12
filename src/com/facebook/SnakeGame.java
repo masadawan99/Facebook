@@ -8,7 +8,8 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 public class SnakeGame extends Game {
@@ -65,6 +66,7 @@ class GamePanel extends JPanel implements ActionListener {
     int appleX;
     int appleY;
     char direction = 'R';
+    LinkedList<Character> directionQueue = new LinkedList<>(); // Buffer for rapid key presses
     float appleScale = 1.0f;
     boolean appleGrowing = true;
 
@@ -170,28 +172,53 @@ class GamePanel extends JPanel implements ActionListener {
 
     private void addMenuButton(String text, ActionListener al) {
         JButton btn = new JButton(text) {
+            @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+                g2.setColor(CLR_TEXT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+                super.paintComponent(g2);
+                g2.dispose();
+
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 if (getModel().isRollover()) {
-                    g2.setColor(CLR_ACCENT);
+                    g2.setColor(Color.RED);
                 } else {
-                    g2.setColor(CLR_PANEL);
+                    g2.setColor(CLR_BG);
                 }
 
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
 
-                g2.setColor(CLR_TEXT);
+                // Border
+                g2.setColor(CLR_ACCENT);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
 
-                g2.setColor(CLR_TEXT);
+                // Text
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.BLACK);
+                } else {
+                    g2.setColor(Color.LIGHT_GRAY);
+                }
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
                 int x = (getWidth() - fm.stringWidth(getText())) / 2;
                 int y = (getHeight() + fm.getAscent()) / 2 - 4;
                 g2.drawString(getText(), x, y);
+
                 g2.dispose();
             }
         };
@@ -200,10 +227,23 @@ class GamePanel extends JPanel implements ActionListener {
         btn.setBackground(CLR_PANEL);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
+        btn.setBorder(null);
+        btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setMaximumSize(new Dimension(300, 60));
         btn.setPreferredSize(new Dimension(300, 60));
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(CLR_ACCENT);
+                btn.setBorder(BorderFactory.createEmptyBorder());
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(CLR_PANEL);
+            }
+        });
         btn.addActionListener(al);
 
         // Hide Continue if game not started
@@ -235,6 +275,7 @@ class GamePanel extends JPanel implements ActionListener {
         bodyParts = 5;
         applesEaten = 0;
         direction = 'R';
+        directionQueue.clear();
         delay = speedDelay;
         scoreMultiplier = multiplier;
         highScore = Database.Load_HighScore();
@@ -329,6 +370,18 @@ class GamePanel extends JPanel implements ActionListener {
     }
 
     public void move() {
+        // Process one direction change from queue per move
+        if (!directionQueue.isEmpty()) {
+            char newDir = directionQueue.poll();
+            // Validate it's not opposite to current direction
+            if ((direction == 'U' && newDir != 'D') ||
+                    (direction == 'D' && newDir != 'U') ||
+                    (direction == 'L' && newDir != 'R') ||
+                    (direction == 'R' && newDir != 'L')) {
+                direction = newDir;
+            }
+        }
+
         for (int i = bodyParts; i > 0; i--) {
             x[i] = x[i - 1];
             y[i] = y[i - 1];
@@ -398,25 +451,35 @@ class GamePanel extends JPanel implements ActionListener {
         public void keyPressed(KeyEvent e) {
             if (currentState != State.RUNNING)
                 return;
+
+            char newDir = '\0';
             switch (e.getKeyCode()) {
-                case KeyEvent.VK_LEFT -> {
-                    if (direction != 'R')
-                        direction = 'L';
+                case KeyEvent.VK_LEFT -> newDir = 'L';
+                case KeyEvent.VK_RIGHT -> newDir = 'R';
+                case KeyEvent.VK_UP -> newDir = 'U';
+                case KeyEvent.VK_DOWN -> newDir = 'D';
+                case KeyEvent.VK_ESCAPE -> {
+                    pauseGame();
+                    return;
                 }
-                case KeyEvent.VK_RIGHT -> {
-                    if (direction != 'L')
-                        direction = 'R';
+                case KeyEvent.VK_P -> {
+                    pauseGame();
+                    return;
                 }
-                case KeyEvent.VK_UP -> {
-                    if (direction != 'D')
-                        direction = 'U';
+            }
+
+            // Add to queue if it's a valid direction change (max 2 buffered inputs)
+            if (newDir != '\0' && directionQueue.size() < 2) {
+                // Get the last direction (either from queue or current)
+                char lastDir = directionQueue.isEmpty() ? direction : directionQueue.peekLast();
+
+                // Only add if not opposite to the last direction
+                if ((lastDir == 'U' && newDir != 'D') ||
+                        (lastDir == 'D' && newDir != 'U') ||
+                        (lastDir == 'L' && newDir != 'R') ||
+                        (lastDir == 'R' && newDir != 'L')) {
+                    directionQueue.offer(newDir);
                 }
-                case KeyEvent.VK_DOWN -> {
-                    if (direction != 'U')
-                        direction = 'D';
-                }
-                case KeyEvent.VK_ESCAPE -> pauseGame();
-                case KeyEvent.VK_P -> pauseGame();
             }
         }
     }
@@ -426,6 +489,7 @@ class GamePanel extends JPanel implements ActionListener {
     // ==========================================
     private JButton createDialogButton(String text) {
         JButton btn = new JButton(text) {
+            @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -433,11 +497,39 @@ class GamePanel extends JPanel implements ActionListener {
 
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
-
                 g2.setColor(CLR_TEXT);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
+                super.paintComponent(g2);
+                g2.dispose();
 
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.RED);
+                } else {
+                    g2.setColor(CLR_BG);
+                }
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                // Border
+                g2.setColor(CLR_ACCENT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
+                // Text
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.BLACK);
+                } else {
+                    g2.setColor(Color.LIGHT_GRAY);
+                }
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
                 int x = (getWidth() - fm.stringWidth(getText())) / 2;
@@ -452,7 +544,7 @@ class GamePanel extends JPanel implements ActionListener {
         btn.setBackground(CLR_PANEL);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
-        btn.setBorder(null); // No Border
+        btn.setBorder(null);
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(180, 45));
@@ -461,6 +553,7 @@ class GamePanel extends JPanel implements ActionListener {
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
                 btn.setBackground(CLR_ACCENT);
+                btn.setBorder(BorderFactory.createEmptyBorder());
             }
 
             public void mouseExited(MouseEvent e) {
@@ -634,12 +727,13 @@ class GamePanel extends JPanel implements ActionListener {
         head.setBorder(new EmptyBorder(20, 0, 20, 0));
         main.add(head, BorderLayout.NORTH);
 
-        DefaultListModel<Info> model = new DefaultListModel<>();
+        // Use Max Heap (PriorityQueue) for efficient descending order sorting
+        PriorityQueue<Info> maxHeap = new PriorityQueue<>((a, b) -> b.score - a.score);
 
         // 1. Get Current User Score
         String curr = Main.current.getCredentials().getUsername();
         int myScore = Database.Load_HighScore();
-        model.addElement(new Info("You (" + Main.Get_Fullname(curr) + ")", myScore));
+        maxHeap.add(new Info("You (" + Main.Get_Fullname(curr) + ")", myScore));
 
         // 2. Get Friends Scores
         ArrayList<String> friends = Database.Load_Friends(curr);
@@ -652,18 +746,15 @@ class GamePanel extends JPanel implements ActionListener {
                     s = (int) in.readObject();
                 } catch (Exception e) {
                 }
-                model.addElement(new Info(Main.Get_Fullname(f), s));
+                maxHeap.add(new Info(Main.Get_Fullname(f), s));
             }
         }
 
-        // Sort
-        ArrayList<Info> list = new ArrayList<>();
-        for (int i = 0; i < model.size(); i++)
-            list.add(model.get(i));
-        Collections.sort(list, (a, b) -> b.score - a.score);
-        model.clear();
-        for (Info i : list)
-            model.addElement(i);
+        // Extract from max heap in descending order
+        DefaultListModel<Info> model = new DefaultListModel<>();
+        while (!maxHeap.isEmpty()) {
+            model.addElement(maxHeap.poll());
+        }
 
         JList<Info> jlist = new JList<>(model);
         jlist.setBackground(CLR_BG);

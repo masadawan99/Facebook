@@ -22,7 +22,6 @@ public class TicTacToe extends Game implements Serializable {
     private String[] players = new String[2];
     private String[] marks = new String[2];
     private boolean isVsComputer = true;
-    private boolean isOnline = false;
     private JButton btnExit;
 
     private transient JFrame frame;
@@ -979,7 +978,6 @@ public class TicTacToe extends Game implements Serializable {
             animateMarkerParams(index, mark);
             State state = Game_mechanic(mark);
             if (state == State.WIN) {
-                // Update Scoreboard on WIN
                 Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
                 if (sb != null) {
                     if (turn.equals(players[0]))
@@ -992,12 +990,6 @@ public class TicTacToe extends Game implements Serializable {
             } else if (state == State.DRAW) {
                 Scoreboard sb = Database.Load_Score_board(Database.TicTacToefldr, filename);
                 if (sb != null) {
-                    sb.increment_Total(); // Just increment total games on draw if desired, or handled in increments
-                    // Actually Scoreboard.java increment_Total is called by increment_ScoreX, so
-                    // for draw we might just want to increment total?
-                    // Scoreboard.java: setTotolgame, getTotolgame... logic implies total = s1 + s2
-                    // usually, but actually draws count too.
-                    // Accessing sb.increment_Total() directly:
                     sb.increment_Total();
                     Database.Write_Score_board(Database.TicTacToefldr, filename, sb);
                 }

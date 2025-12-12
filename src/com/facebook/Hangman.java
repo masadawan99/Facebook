@@ -4,13 +4,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
 
 import javax.swing.*;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 
 public class Hangman extends Game implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -39,12 +36,16 @@ public class Hangman extends Game implements Serializable {
     // Colors
     private final Color CLR_BG = Color.decode("#121212");
     private final Color CLR_PANEL = Color.decode("#1E1E1E");
+    private final Color CLR_BTN = Color.decode("#252525");
+    private final Color CLR_BTN_HOVER = Color.decode("#303030");
     private final Color CLR_ACCENT = Color.decode("#FF4500");
     private final Color CLR_ACCENT_GLOW = new Color(255, 69, 0, 100);
     private final Color CLR_TEXT = Color.decode("#E0E0E0");
-    private final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 48);
+
+    private final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 40);
+    private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 22);
+    private final Font FONT_UI = new Font("Segoe UI", Font.PLAIN, 16);
     private final Font FONT_BTN = new Font("Segoe UI", Font.BOLD, 14);
-    private final Font FONT_HEADER = new Font("Segoe UI", Font.BOLD, 24);
 
     // Word Lists
     private final String[] EASY_WORDS = { "JAVA", "CODE", "GAME", "BYTE", "LOOP", "BUG", "WEB", "APP", "GUI", "KEY" };
@@ -69,9 +70,9 @@ public class Hangman extends Game implements Serializable {
         if (frame != null)
             frame.dispose();
         frame = new JFrame(title);
-        frame.setUndecorated(true); // Minimalistic
+        frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(1000, 800); // Larger for airy feel
+        frame.setSize(1000, 800);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.getContentPane().setBackground(CLR_BG);
@@ -87,47 +88,78 @@ public class Hangman extends Game implements Serializable {
 
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text) {
+            @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isRollover()) {
-                    g2.setColor(CLR_ACCENT);
-                    // Glow
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f));
-                    g2.fill(new RoundRectangle2D.Float(-2, -2, getWidth() + 4, getHeight() + 4, 20, 20));
-                    g2.setComposite(AlphaComposite.SrcOver);
-                } else {
-                    g2.setColor(CLR_PANEL);
-                }
+                g2.setColor(getBackground());
 
-                // Background
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
-
-                // Thick Border
                 g2.setColor(CLR_TEXT);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
+                super.paintComponent(g2);
+                g2.dispose();
 
-                g2.setColor(CLR_TEXT);
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.RED);
+                } else {
+                    g2.setColor(CLR_BG);
+                }
+
+                Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
+                g2.fill(shape);
+
+                // Border
+                g2.setColor(CLR_ACCENT);
+                g2.setStroke(new BasicStroke(3f));
+                g2.draw(shape);
+
+                // Text
+                if (getModel().isRollover()) {
+                    g2.setColor(Color.BLACK);
+                } else {
+                    g2.setColor(Color.LIGHT_GRAY);
+                }
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
                 int x = (getWidth() - fm.stringWidth(getText())) / 2;
                 int y = (getHeight() + fm.getAscent()) / 2 - 4;
                 g2.drawString(getText(), x, y);
+
                 g2.dispose();
             }
         };
-        btn.setFont(FONT_BTN);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btn.setForeground(CLR_TEXT);
+        btn.setBackground(CLR_BTN);
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
-        btn.setBorder(null); // Explicitly remove border
+        btn.setBorder(null);
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setPreferredSize(new Dimension(250, 50));
         btn.setMaximumSize(new Dimension(250, 50));
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(CLR_BTN_HOVER);
+                btn.setBorder(BorderFactory.createEmptyBorder());
+            }
+
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(CLR_BTN);
+            }
+        });
         return btn;
     }
 
@@ -149,8 +181,8 @@ public class Hangman extends Game implements Serializable {
         content.add(title);
         content.add(Box.createVerticalStrut(60));
 
-        addButtonToMenu(content, "OFFLINE MODE", e -> showOfflineSourceDialog());
-        addButtonToMenu(content, "SCOREBOARD", e -> showFriendScoreboard());
+        addButtonToMenu(content, "VS PLAYER (LOCAL)", e -> showSetWordDialog());
+        addButtonToMenu(content, "VS COMPUTER", e -> showDifficultyDialog());
         addButtonToMenu(content, "EXIT", e -> frame.dispose());
 
         frame.add(content);
@@ -221,52 +253,36 @@ public class Hangman extends Game implements Serializable {
             kBtn.setContentAreaFilled(false);
             kBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             kBtn.addActionListener(e -> {
-                if (isOnline) {
-                    // Check if I am allowed to guess
-                    String me = Main.current.getCredentials().getUsername();
-                    // I can only guess if I am NOT the setter (players[0])
-                    // Actually, let's just check: Am I the Guesser?
-                    // We established Inviter(0) = Setter, Invitee(1) = Guesser.
-                    if (players[1] != null && players[1].equals(me)) {
-                        // handleOnlineGuess(c, kBtn); -- REMOVED
-                    } else {
-                        // Spectator clicked
-                        // Do nothing or shake
-                    }
-                } else {
-                    handleGuess(c, kBtn);
-                }
+                handleGuess(c, kBtn);
             });
             keyButtons[i] = kBtn;
             keyboardPanel.add(kBtn);
         }
         main.add(keyboardPanel, BorderLayout.SOUTH);
 
-        // Turn Label
-        JLabel turnLabel = new JLabel(title, SwingConstants.CENTER); // Reuse title for now, logic below
-        turnLabel.setFont(FONT_HEADER);
-        turnLabel.setForeground(CLR_ACCENT);
-        main.add(turnLabel, BorderLayout.NORTH);
-
-        // Menu Button (Revised Position or just add to North Panel)
+        // Header Panel with centered title
         JPanel topObj = new JPanel(new BorderLayout());
         topObj.setBackground(CLR_BG);
-        topObj.add(turnLabel, BorderLayout.CENTER);
 
+        // Wrapper panel to truly center the title
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        JLabel turnLabel = new JLabel(title, SwingConstants.CENTER);
+        turnLabel.setFont(FONT_HEADER);
+        turnLabel.setForeground(CLR_ACCENT);
+        centerWrapper.add(turnLabel);
+
+        topObj.add(centerWrapper, BorderLayout.CENTER);
+
+        // Forfeit button on the right
         JPanel menuP = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         menuP.setOpaque(false);
-        JButton btnMenu = new JButton("MENU");
-        btnMenu.setFont(FONT_BTN);
-        btnMenu.setBackground(CLR_BG);
-        btnMenu.setForeground(Color.GRAY);
-        btnMenu.setBorder(null);
-        btnMenu.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnMenu.addActionListener(e -> {
-            if (onlineTimer != null)
-                onlineTimer.stop();
-            showMainMenu();
-        });
-        menuP.add(btnMenu);
+        JButton btnForfeit = createStyledButton("FORFEIT");
+        btnForfeit.setPreferredSize(new Dimension(100, 40));
+        btnForfeit.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnForfeit.addActionListener(e -> handleForfeit());
+        menuP.add(btnForfeit);
+
         topObj.add(menuP, BorderLayout.EAST);
 
         main.add(topObj, BorderLayout.NORTH);
@@ -285,7 +301,7 @@ public class Hangman extends Game implements Serializable {
                     if (idx >= 0 && idx < 26) {
                         JButton btn = keyButtons[idx];
                         if (btn.isEnabled()) {
-                            btn.doClick(); // Simulates click, handles logic + online checks automatically
+                            btn.doClick();
                         }
                     }
                 }
@@ -294,6 +310,15 @@ public class Hangman extends Game implements Serializable {
 
         frame.revalidate();
         frame.repaint();
+    }
+
+    private void handleForfeit() {
+        if (onlineTimer != null && onlineTimer.isRunning())
+            onlineTimer.stop();
+        if (animTimer != null && animTimer.isRunning())
+            animTimer.stop();
+        String message = isVsComputer ? "Computer Won! Word: " + word : "You Lost! Word: " + word;
+        showEndDialog(message, false);
     }
 
     private class HangmanPanel extends JPanel {
@@ -316,22 +341,13 @@ public class Hangman extends Game implements Serializable {
             g2.setColor(Color.DARK_GRAY);
             g2.setStroke(new BasicStroke(2));
             g2.drawLine(centerX, 0, centerX, startY);
-            // Hook
-            // g2.drawArc(centerX - 10, startY - 10, 20, 20, 270, 180); // Small hook? No,
-            // keep it simple.
 
             // Draw Man (Neon Style)
             g2.setColor(CLR_ACCENT);
             g2.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
             // Parts Logic:
-            // 6=None
-            // 5=Head
-            // 4=Body
-            // 3=L Arm
-            // 2=R Arm
-            // 1=L Leg
-            // 0=R Leg
+            // 6=None, 5=Head, 4=Body, 3=L Arm, 2=R Arm, 1=L Leg, 0=R Leg
 
             // Draw FULLY established parts (those with index > tries)
             if (tries < 6)
@@ -349,9 +365,6 @@ public class Hangman extends Game implements Serializable {
 
             // Draw ANIMATING part
             if (animatingLimbIndex != -1) {
-                // If animatingLimbIndex == tries, it means we are currently losing this life
-                // Wait, logic: when tries goes 6->5, we animate Head. initializingLimbIndex =
-                // 5.
                 if (animatingLimbIndex == 5)
                     drawHead(g2, centerX, startY, drawProgress);
                 else if (animatingLimbIndex == 4)
@@ -446,48 +459,6 @@ public class Hangman extends Game implements Serializable {
     // ==========================================
     // Logic - Offline
     // ==========================================
-    private void showOfflineSourceDialog() {
-        JDialog d = new JDialog(frame, "Select Opponent", true);
-        d.setUndecorated(true);
-        d.setSize(400, 300);
-        d.setLocationRelativeTo(frame);
-
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(CLR_PANEL);
-        p.setBorder(new LineBorder(CLR_ACCENT, 2));
-
-        JLabel l = new JLabel("MODE SELECTION");
-        l.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        l.setForeground(CLR_ACCENT);
-        l.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JButton btnCpu = createStyledButton("VS COMPUTER");
-        JButton btnPlayer = createStyledButton("VS PLAYER (LOCAL)");
-        JButton btnCancel = createStyledButton("CANCEL");
-
-        btnCpu.addActionListener(e -> {
-            d.dispose();
-            showDifficultyDialog();
-        });
-        btnPlayer.addActionListener(e -> {
-            d.dispose();
-            showSetWordDialog();
-        });
-        btnCancel.addActionListener(e -> d.dispose());
-
-        p.add(Box.createVerticalStrut(30));
-        p.add(l);
-        p.add(Box.createVerticalStrut(30));
-        p.add(btnCpu);
-        p.add(Box.createVerticalStrut(15));
-        p.add(btnPlayer);
-        p.add(Box.createVerticalStrut(15));
-        p.add(btnCancel);
-
-        d.add(p);
-        d.setVisible(true);
-    }
 
     private void showDifficultyDialog() {
         JDialog d = new JDialog(frame, "Select Difficulty", true);
@@ -498,7 +469,7 @@ public class Hangman extends Game implements Serializable {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(CLR_PANEL);
-        p.setBorder(new LineBorder(CLR_ACCENT, 2));
+        p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT, 2));
 
         JLabel l = new JLabel("DIFFICULTY");
         l.setFont(new Font("Segoe UI", Font.BOLD, 22));
@@ -508,6 +479,7 @@ public class Hangman extends Game implements Serializable {
         JButton btnEasy = createStyledButton("EASY");
         JButton btnMed = createStyledButton("MEDIUM");
         JButton btnHard = createStyledButton("HARD");
+        JButton btnCancel = createStyledButton("CANCEL");
 
         java.util.Random rnd = new java.util.Random();
 
@@ -523,6 +495,10 @@ public class Hangman extends Game implements Serializable {
             d.dispose();
             startOfflineGame(HARD_WORDS[rnd.nextInt(HARD_WORDS.length)], true);
         });
+        btnCancel.addActionListener(e -> {
+            d.dispose();
+            showMainMenu();
+        });
 
         p.add(Box.createVerticalStrut(30));
         p.add(l);
@@ -532,6 +508,8 @@ public class Hangman extends Game implements Serializable {
         p.add(btnMed);
         p.add(Box.createVerticalStrut(15));
         p.add(btnHard);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnCancel);
 
         d.add(p);
         d.setVisible(true);
@@ -539,14 +517,14 @@ public class Hangman extends Game implements Serializable {
 
     private void showSetWordDialog() {
         JDialog d = new JDialog(frame, "Set Word", true);
-        d.setSize(400, 250);
+        d.setSize(400, 300);
         d.setUndecorated(true);
         d.setLocationRelativeTo(frame);
 
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(CLR_PANEL);
-        p.setBorder(new LineBorder(CLR_ACCENT, 2));
+        p.setBorder(BorderFactory.createLineBorder(CLR_ACCENT, 2));
 
         JLabel l = new JLabel("SECRET WORD");
         l.setFont(new Font("Segoe UI", Font.BOLD, 22));
@@ -556,7 +534,9 @@ public class Hangman extends Game implements Serializable {
         JPasswordField tf = new JPasswordField(20);
         tf.setMaximumSize(new Dimension(300, 40));
 
-        JButton btnStart = createStyledButton("Start");
+        JButton btnStart = createStyledButton("START");
+        JButton btnCancel = createStyledButton("CANCEL");
+
         btnStart.addActionListener(e -> {
             String w = new String(tf.getPassword()).toUpperCase();
             if (w.isEmpty() || !w.matches("[A-Z]+")) {
@@ -566,6 +546,10 @@ public class Hangman extends Game implements Serializable {
             d.dispose();
             startOfflineGame(w, false);
         });
+        btnCancel.addActionListener(e -> {
+            d.dispose();
+            showMainMenu();
+        });
 
         p.add(Box.createVerticalStrut(30));
         p.add(l);
@@ -573,6 +557,8 @@ public class Hangman extends Game implements Serializable {
         p.add(tf);
         p.add(Box.createVerticalStrut(30));
         p.add(btnStart);
+        p.add(Box.createVerticalStrut(15));
+        p.add(btnCancel);
 
         d.add(p);
         d.setVisible(true);
@@ -615,20 +601,17 @@ public class Hangman extends Game implements Serializable {
             tries--;
             flashBackground(Color.decode("#330000"));
             // Start Animation
-            startLimbAnimation(tries); // tries checks: if tries=5, we draw head (idx 5)
+            startLimbAnimation(tries);
         } else {
             btn.setBackground(Color.decode("#006400"));
             gamePanel.repaint();
         }
 
         if (allFound) {
-            if (isVsComputer)
-                saveLocalWin();
             Timer t = new Timer(500, e -> showEndDialog("YOU WON! Word: " + word, true));
             t.setRepeats(false);
             t.start();
         } else if (tries <= 0) {
-            // Wait for leg animation to finish?
             Timer t = new Timer(800, e -> showEndDialog("GAME OVER! Word: " + word, false));
             t.setRepeats(false);
             t.start();
@@ -649,19 +632,6 @@ public class Hangman extends Game implements Serializable {
                     drawProgress = 1.0f;
                     gamePanel.repaint();
                     ((Timer) e.getSource()).stop();
-                    // Don't reset animatingLimbIndex yet, let it be drawn by the 'static' logic
-                    // next repaint?
-                    // The 'static' logic only draws if index > tries.
-                    // If we have 5 tries left, static draws > 5. Head is 5.
-                    // So we must rely on animatingLimbIndex to draw the current one even if full.
-                    // OR better: In paint, if tries < 6, we draw head.
-                    // My static logic was: if(tries < 6) drawHead.
-                    // So, if I set tries=5 immediately (which I did), paintComponent will draw FULL
-                    // HEAD immediately.
-                    // I need to intercept that.
-                    // Logic fix in paintComponent:
-                    // If(tries < 6 && animatingLimbIndex != 5) drawHead(full)
-                    // If(animatingLimbIndex == 5) drawHead(progress)
                 }
                 gamePanel.repaint();
             }
@@ -678,24 +648,6 @@ public class Hangman extends Game implements Serializable {
         t.start();
     }
 
-    private void saveLocalWin() {
-        String curr = Main.current.getCredentials().getUsername();
-        File fldr = new File(Database.HangManfldr, curr);
-        if (!fldr.exists())
-            fldr.mkdirs();
-        File file = new File(fldr, "HighScore");
-        int score = 0;
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
-            score = (int) in.readObject();
-        } catch (Exception e) {
-        }
-        score++;
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
-            out.writeObject(score);
-        } catch (Exception e) {
-        }
-    }
-
     private void showEndDialog(String msg, boolean win) {
         JDialog d = new JDialog(frame, "Result", true);
         d.setUndecorated(true);
@@ -705,14 +657,30 @@ public class Hangman extends Game implements Serializable {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBackground(CLR_PANEL);
-        p.setBorder(new LineBorder(win ? Color.GREEN : Color.RED, 2));
+        p.setBorder(BorderFactory.createLineBorder(win ? Color.GREEN : Color.RED, 2));
 
         JLabel l = new JLabel("<html><center>" + msg + "</center></html>", SwingConstants.CENTER);
         l.setFont(new Font("Segoe UI", Font.BOLD, 18));
         l.setForeground(CLR_TEXT);
         l.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        JPanel btnPanel = new JPanel();
+        btnPanel.setOpaque(false);
+
+        JButton btnPlayAgain = createStyledButton("PLAY AGAIN");
+        btnPlayAgain.setPreferredSize(new Dimension(140, 45));
+        btnPlayAgain.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnPlayAgain.addActionListener(e -> {
+            d.dispose();
+            if (isVsComputer)
+                showDifficultyDialog();
+            else
+                showSetWordDialog();
+        });
+
         JButton btnMenu = createStyledButton("MENU");
+        btnMenu.setPreferredSize(new Dimension(140, 45));
+        btnMenu.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnMenu.addActionListener(e -> {
             d.dispose();
             showMainMenu();
@@ -720,94 +688,13 @@ public class Hangman extends Game implements Serializable {
 
         p.add(Box.createVerticalStrut(40));
         p.add(l);
-        p.add(Box.createVerticalStrut(40));
-        p.add(btnMenu);
+        p.add(Box.createVerticalStrut(30));
+
+        btnPanel.add(btnPlayAgain);
+        btnPanel.add(btnMenu);
+        p.add(btnPanel);
 
         d.add(p);
-        d.setVisible(true);
-    }
-
-    // ==========================================
-    // Friend Scoreboard
-    // ==========================================
-    private class Info {
-        String name;
-        int score;
-
-        Info(String n, int s) {
-            name = n;
-            score = s;
-        }
-    }
-
-    private void showFriendScoreboard() {
-        JDialog d = new JDialog(frame, "Scoreboard", true);
-        d.setUndecorated(true);
-        d.setSize(400, 500);
-        d.setLocationRelativeTo(frame);
-
-        JPanel main = new JPanel(new BorderLayout());
-        main.setBackground(CLR_BG);
-        main.setBorder(new LineBorder(CLR_ACCENT, 2));
-
-        JLabel head = new JLabel("PVP STREAKS", SwingConstants.CENTER);
-        head.setFont(FONT_HEADER);
-        head.setForeground(CLR_ACCENT);
-        head.setBorder(new EmptyBorder(20, 0, 20, 0));
-        main.add(head, BorderLayout.NORTH);
-
-        DefaultListModel<Info> model = new DefaultListModel<>();
-
-        String curr = Main.current.getCredentials().getUsername();
-
-        // Load Friends and their streaks
-        ArrayList<String> friends = Database.Load_Friends(curr);
-        for (String f : friends) {
-            int s = Database.Load_Streak(f);
-            model.addElement(new Info(Main.Get_Fullname(f), s));
-        }
-
-        ArrayList<Info> list = new ArrayList<>();
-        for (int i = 0; i < model.size(); i++)
-            list.add(model.get(i));
-        Collections.sort(list, (a, b) -> b.score - a.score);
-        model.clear();
-        for (Info i : list)
-            model.addElement(i);
-
-        JList<Info> jlist = new JList<>(model);
-        jlist.setBackground(CLR_BG);
-        jlist.setCellRenderer(new ListCellRenderer<Info>() {
-            @Override
-            public Component getListCellRendererComponent(JList<? extends Info> list, Info value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JPanel p = new JPanel(new BorderLayout());
-                p.setBackground(isSelected ? CLR_PANEL : CLR_BG);
-                p.setBorder(new EmptyBorder(10, 20, 10, 20));
-                JLabel n = new JLabel((index + 1) + ". " + value.name);
-                n.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-                n.setForeground(CLR_TEXT);
-                JLabel s = new JLabel("Streak: " + value.score);
-                s.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                s.setForeground(Color.ORANGE);
-                p.add(n, BorderLayout.WEST);
-                p.add(s, BorderLayout.EAST);
-                return p;
-            }
-        });
-
-        main.add(new JScrollPane(jlist), BorderLayout.CENTER);
-
-        JButton btnClose = createStyledButton("CLOSE");
-        btnClose.setBorder(null); // Ensure no border
-        btnClose.setPreferredSize(new Dimension(150, 40));
-        btnClose.addActionListener(e -> d.dispose());
-        JPanel btnP = new JPanel();
-        btnP.setBackground(CLR_BG);
-        btnP.add(btnClose);
-        main.add(btnP, BorderLayout.SOUTH);
-
-        d.add(main);
         d.setVisible(true);
     }
 }
