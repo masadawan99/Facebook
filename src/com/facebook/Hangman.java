@@ -9,7 +9,6 @@ import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 
 public class Hangman extends Game {
-    private static final long serialVersionUID = 1L;
 
     private String word = "";
     private char[] letters;
@@ -103,12 +102,10 @@ public class Hangman extends Game {
                 Shape shape = new RoundRectangle2D.Float(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
                 g2.fill(shape);
 
-                // Border
                 g2.setColor(CLR_ACCENT);
                 g2.setStroke(new BasicStroke(3f));
                 g2.draw(shape);
 
-                // Text
                 if (getModel().isRollover()) {
                     g2.setColor(Color.BLACK);
                 } else {

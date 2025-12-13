@@ -944,24 +944,28 @@ public class Database {
     }
 
     public static List<String> Mutual_Friends(String username, HashSet<String> main) {
-        HashSet<String> U_Friends = Database.Load_Friends_Hash(username);
-        if (U_Friends.contains(username))
-            return null;
-        main.retainAll(U_Friends);
-        return new ArrayList<>(U_Friends);
+        HashSet<String> userFriends = Database.Load_Friends_Hash(username);
+
+        HashSet<String> mutual = new HashSet<>(main); // copy
+        mutual.retainAll(userFriends);                // intersection
+
+        return new ArrayList<>(mutual);
     }
 
     public static HashMap<String, List<String>> mutual_frndz(List<String> people) {
         HashMap<String, List<String>> mutual = new HashMap<>();
-        HashSet<String> main = Database.Load_Friends_Hash(Main.current.getCredentials().getUsername());
-        for (String P : people) {
-            List<String> mutuals = Mutual_Friends(P, main);
-            if (mutuals != null) {
-                mutual.putIfAbsent(P, mutuals);
+        HashSet<String> mainFriends = Database.Load_Friends_Hash(Main.current.getCredentials().getUsername());
+
+        for (String p : people) {
+            List<String> mutuals = Mutual_Friends(p, mainFriends);
+            if (!mutuals.isEmpty()) {
+                mutual.put(p, mutuals);
             }
         }
         return mutual;
     }
+
+
 
     public static List<String> Load_Friend_of_Friends() {
         String curr = Main.current.getCredentials().getUsername();
