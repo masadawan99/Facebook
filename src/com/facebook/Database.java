@@ -1078,24 +1078,13 @@ public class Database {
     public static List<String> Load_Everyone3_6() {
         String username = Main.current.getCredentials().getUsername();
         int maxDepth = 6;
-        HashSet<String> level1 = Database.Load_Friends_Hash(username);
-        HashSet<String> level2 = new HashSet<>();
-        for (String f : level1) {
-            HashSet<String> fFriends = Database.Load_Friends_Hash(f);
-            level2.addAll(fFriends);
-        }
+
         HashSet<String> visited = new HashSet<>();
-        visited.add(username);
-        visited.addAll(level1);
-        visited.addAll(level2);
-
         Queue<BFSNode> queue = new LinkedList<>();
-
-        for (String f : level1) {
-            queue.add(new BFSNode(f, 1));
-        }
-
         HashSet<String> result = new HashSet<>();
+
+        queue.add(new BFSNode(username, 0));
+        visited.add(username);
 
         while (!queue.isEmpty()) {
             BFSNode node = queue.poll();
@@ -1110,10 +1099,10 @@ public class Database {
             for (String n : neighbors) {
                 if (!visited.contains(n)) {
                     visited.add(n);
-
                     int nextDepth = depth + 1;
                     queue.add(new BFSNode(n, nextDepth));
-                    if (nextDepth >= 3 && nextDepth <= 6) {
+
+                    if (nextDepth >= 3) {
                         result.add(n);
                     }
                 }
