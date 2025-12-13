@@ -108,7 +108,7 @@ public class Page {
                     }
                 }
                 case 3 -> {
-                    // creamy deal with ts
+
                 }
                 case 0 -> {
                     return;
@@ -129,6 +129,7 @@ public class Page {
             System.out.println("            2- Chose Friends in list");
             System.out.println("            3- Search Friends");
             System.out.println("            0- Cancel");
+            System.out.println("=========================================");
             switch (Main.Input_Int("Choice")) {
                 case 1 -> {
                     Find_Friends();
@@ -380,6 +381,7 @@ public class Page {
         String username = user.getCredentials().getUsername();
         if (!friend) {
             if (!Database.F_Request_Already_sent(username)) {
+                Database.Write_Notification(username,Main.Input_NotificationF());
                 Database.WriteFriendRequestRecieved(username);
                 Database.WriteFriendRequestSent(username);
                 System.out.println("Friend Request Sent Successfully!");
@@ -402,7 +404,7 @@ public class Page {
             System.out.println("__________________________________________");
             switch (Main.Input_Int("Choice")) {
                 case 1 -> {
-                    Searching_By_Name(Main.Input_String("Friend's Name"));
+                    Searching_By_Name("Friend's Name");
                 }
                 case 2 -> {
                     People_you_may_know();
@@ -788,7 +790,9 @@ public class Page {
             switch (Main.Input_Int("Choice")) {
                 case 1 -> {
                     Database.WriteMessage(chat.getFolder_path(), Main.Input_Message());
-                    Database.Write_Notification(chat.getR_username(), Main.Input_NotificationM());
+                    if(!Database.Check_Online(chat.getR_username())){
+                        Database.Write_Notification(chat.getR_username(), Main.Input_NotificationM());
+                    }
                     System.out.println("Message sent!");
                 }
                 case 2 -> {

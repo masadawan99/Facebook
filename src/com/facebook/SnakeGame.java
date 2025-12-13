@@ -13,6 +13,7 @@ import java.util.PriorityQueue;
 import java.util.Random;
 
 public class SnakeGame extends Game {
+
     public SnakeGame() {
         super("SnakeGame", "Single Player");
     }

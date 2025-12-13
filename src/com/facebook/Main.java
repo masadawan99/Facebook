@@ -2,6 +2,7 @@ package com.facebook;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -13,17 +14,6 @@ public class Main {
     public static void main(String[] args) {
         if (Database.Check_Database()) {
             System_Start();
-        }
-    }
-
-    public static Gender Input_Gender() {
-        while (true) {
-            System.out.print("Enter Gender (MALE/FEMALE): ");
-            String gender = scanner.next();
-            if (gender.equals("MALE") || gender.equals("FEMALE")) {
-                return Gender.valueOf(gender);
-            }
-            System.out.println("Invalid Gender");
         }
     }
 
@@ -39,23 +29,7 @@ public class Main {
     }
 
     public static void test_data() {
-        // testing data
-        User one = new User("creamy", "man", LocalDate.now(), "...", new Credentials("creamyxo", "12345678"),
-                Gender.MALE);
-        User two = new User("mike", "tyson", LocalDate.now(), "...", new Credentials("mikey123", "12345678"),
-                Gender.MALE);
-        User three = new User("asad", "awan", LocalDate.now(), "...", new Credentials("asad-awan", "12345678"),
-                Gender.MALE);
-        User four = new User("shan", "snake", LocalDate.now(), "...", new Credentials("Shansnake", "12345678"),
-                Gender.MALE);
-        Database.Write_new_account(one);
-        Database.Write_new_account(two);
-        Database.Write_new_account(three);
-        Database.Write_new_account(four);
-        Main.current = one;
-        Database.WriteFriend("asad-awan");
-        Database.WriteFriend("mikey123");
-        Database.WriteFriend("Shansnake");
+
     }
 
     public static boolean Yes_or_No(String n) {
@@ -209,6 +183,17 @@ public class Main {
             } else {
                 System.out.println("Passwords don't Match");
             }
+        }
+    }
+
+    public static Gender Input_Gender() {
+        while (true) {
+            System.out.print("Enter Gender (MALE/FEMALE): ");
+            String gender = scanner.next();
+            if (gender.equals("MALE") || gender.equals("FEMALE")) {
+                return Gender.valueOf(gender);
+            }
+            System.out.println("Invalid Gender");
         }
     }
 
@@ -544,6 +529,10 @@ public class Main {
                 Database.Write_Notification(f, Input_NotificationT());
             }
         }
+    }
+
+    public static Notification Input_NotificationF() {
+        return new Notification(Notification.Type.Friend_Request, current.getFullName() + "Sent you a Friend Request");
     }
 
     public static Notification Input_NotificationT() {

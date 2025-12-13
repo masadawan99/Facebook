@@ -16,7 +16,7 @@ public class Notification implements Serializable {
     }
 
     public enum Type {
-        MESSAGE, LIKE, COMMENT, TAG, GAME
+        MESSAGE, LIKE, COMMENT, TAG, GAME , Friend_Request
     }
 
     private String sender;

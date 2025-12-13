@@ -12,8 +12,6 @@ import javax.swing.plaf.basic.BasicScrollBarUI;
 
 public class TicTacToe extends Game {
 
-    private static final long serialVersionUID = 1L;
-
     private String cross = "X";
     private String tick = "O";
     private String turn;
@@ -832,7 +830,6 @@ public class TicTacToe extends Game {
                 Database.Write_Score_board(Database.TicTacToefldr, filename, new Scoreboard());
             }
 
-            // Fix: Clear any stale END files to prevent immediate game over
             Database.Delete_END(Database.TicTacToefldr, filename, "END");
             Database.Delete_END(Database.TicTacToefldr, filename, "END" + curr);
             Database.Delete_END(Database.TicTacToefldr, filename, "END" + f);
