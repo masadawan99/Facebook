@@ -313,7 +313,6 @@ public class Page {
                     Send_Friend_Request(user);
                 }
                 case 3 -> {
-                    // creamy handle this shit
                 }
                 case 0 -> {
                     return;

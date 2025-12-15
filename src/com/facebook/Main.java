@@ -320,6 +320,7 @@ public class Main {
                     if (p.equals(c)) {
                         temp.getCredentials().setPassword(p);
                         System.out.println("Password Changed Successfully");
+                        Database.WriteUser(temp);
                         return;
                     } else
                         System.out.println("Passwords don't Match!");
