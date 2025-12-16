@@ -239,8 +239,7 @@ public class Main {
     }
 
     public static Comment Input_Comment() {
-        String sender = Main.current.getFirstname() + " " + Main.current.getLastname();
-        return new Comment(Input_String("Comment"), sender);
+        return new Comment(Input_String("Comment"), current.getFullName());
     }
 
     public static int Input_Int(String n) {

@@ -503,8 +503,44 @@ public class Database {
         }
     }
 
+    public static File chosen_file2(String path, String username){
+        File folder = new File(Feedsfolder,username);
+        File[] files = folder.listFiles();
+        for (int i = files.length - 1; i >= 0; i--) {
+            try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(files[i]))) {
+                String currpath = (String) in.readObject();
+                if(currpath.equals(path)){
+                    return files[i];
+                }
+            } catch (Exception e) {
+                System.out.println("Eror 404!");
+            }
+        }
+        return null;
+    }
+
+    public static File chosen_file(int index,String username){
+        File folder = new File(Feedsfolder,username);
+        File[] files = folder.listFiles();
+        return files[files.length-1-index];
+    }
+
+    public static void Delete_chosen(File file){
+        file.delete();
+    }
+
+    public static String Load_Post_path(File file){
+        String path="";
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+            path = (String) in.readObject();
+        } catch (Exception e) {
+            System.out.println("Eror 404!");
+        }
+        return path;
+    }
+
     public static void WriteFeed(String path, String username, Post post) {
-        String timestamp = safeTimestamp(post.getTime());
+        String timestamp = safeTimestamp(LocalDateTime.now());
         File folder = new File(Feedsfolder, username);
         File file = new File(folder, timestamp + post.getSender());
         try (ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(file))) {

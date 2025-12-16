@@ -1,5 +1,6 @@
 package com.facebook;
 
+import java.io.File;
 import java.util.*;
 
 public class Page {
@@ -499,7 +500,7 @@ public class Page {
         }
     }
 
-    public static void View_Post_Details(Post post) {
+    public static void View_Post_Details(Post post, int index) {
         while (true) {
             boolean hasLiked = Database.Has_Liked(post);
             System.out.println("============================================");
@@ -537,11 +538,10 @@ public class Page {
                         if (!post.getSender().equals(Main.current.getCredentials().getUsername())) {
                             Database.Write_Notification(post.getSender(), Main.Input_NotificationL());
                         }
-                        String timestamp = Database.safeTimestamp(post.getTime());
-                        String path = timestamp + post.getSender();
-                        for (String f : post.getTagged()) {
-                            Database.WriteFeed(path, f, post);
-                            Database.Write_Notification(f, Main.Input_NotificationL());
+                        if(post.getTagged()!=null){
+                            for (String f : post.getTagged()) {
+                                Database.Write_Notification(f, Main.Input_NotificationL());
+                            }
                         }
                         Database.Write_Like(post);
                         System.out.println("Post liked!");
@@ -550,15 +550,19 @@ public class Page {
                 case 4 -> {
                     Database.Write_Comment(post, Main.Input_Comment());
                     System.out.println("Comment added!");
-                    if (!post.getSender().equals(Main.current.getCredentials().getUsername())) {
-                        String timestamp = Database.safeTimestamp(post.getTime());
-                        String path = timestamp + post.getSender();
-                        for (String f : post.getTagged()) {
-                            Database.WriteFeed(path, f, post);
-                            Database.Write_Notification(f, Main.Input_NotificationC());
+                    String curr = Main.current.getCredentials().getUsername();
+                    File chosen = Database.chosen_file(index,curr);
+                    String path = Database.Load_Post_path(chosen);
+                    Database.Delete_chosen(chosen);
+                    Database.WriteFeed(path,curr,post);
+                    if (post.getTagged() != null) {
+                        for (int i = 0; i < post.getTagged().size(); i++) {
+                            Feed_updater(post.getTagged().get(i), path, post);
+                            Database.Write_Notification(post.getTagged().get(i), Main.Input_NotificationC());
                         }
-                        Database.Write_Notification(post.getSender(), Main.Input_NotificationC());
                     }
+                    Database.Write_Notification(post.getSender(), Main.Input_NotificationC());
+                    Feed_updater(post.getSender(), path, post);
                 }
                 case 5 -> {
                     ArrayList<Comment> comments = Database.Load_Post_Comments(post);
@@ -585,6 +589,12 @@ public class Page {
         }
     }
 
+    public static void Feed_updater(String username,String path, Post post){
+        File chosen = Database.chosen_file2(path,username);
+        Database.Delete_chosen(chosen);
+        Database.WriteFeed(path, username, post);
+    }
+
     public static void View_My_Posts() {
         ArrayList<Post> posts = Database.Load_User_Posts(Main.current.getCredentials().getUsername());
         while (true) {
@@ -601,7 +611,7 @@ public class Page {
                     if (index < 1 || index > posts.size()) {
                         System.out.println("Invalid Index");
                     } else {
-                        View_Post_Details(posts.get(--index));
+                        View_Post_Details(posts.get(--index), index);
                     }
                 }
                 case 0 -> {
@@ -1073,7 +1083,7 @@ public class Page {
                     if (index < 1 || index > feeds.size()) {
                         System.out.println("Invalid Index");
                     } else {
-                        View_Post_Details(feeds.get(--index));
+                        View_Post_Details(feeds.get(--index),index);
                     }
                 }
                 case 2 -> {
